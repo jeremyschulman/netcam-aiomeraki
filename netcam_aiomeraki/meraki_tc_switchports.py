@@ -16,28 +16,27 @@
 # System Imports
 # -----------------------------------------------------------------------------
 
-import importlib.metadata as importlib_metadata
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 # -----------------------------------------------------------------------------
 # Public Imports
 # -----------------------------------------------------------------------------
 
-from netcad.device import Device
+from netcad.netcam import tc_result_types as tr
+from netcad.vlan.tc_switchports import SwitchportTestCases
 
 # -----------------------------------------------------------------------------
 # Private Imports
 # -----------------------------------------------------------------------------
 
-from netcam_aiomeraki.meraki_dut_mx import MerakiMXDeviceUnderTest
-from netcam_aiomeraki.meraki_dut_ms import MerakiMSDeviceUnderTest
-
+if TYPE_CHECKING:
+    from .meraki_dut import MerakiDeviceUnderTest
 
 # -----------------------------------------------------------------------------
 # Exports
 # -----------------------------------------------------------------------------
 
-__all__ = ["__version__", "get_dut"]
+__all__ = ["meraki_tc_switchports"]
 
 # -----------------------------------------------------------------------------
 #
@@ -45,22 +44,37 @@ __all__ = ["__version__", "get_dut"]
 #
 # -----------------------------------------------------------------------------
 
-__version__ = importlib_metadata.version(__name__)
+
+async def meraki_tc_switchports(
+    self, testcases: SwitchportTestCases
+) -> tr.CollectionTestResults:
+    dut: MerakiDeviceUnderTest = self
+
+    product_handlers = {
+        "MX": _meraki_mx_tc_switchports,
+        "MS": _meraki_ms_tc_switchports,
+    }
+
+    if not (handler := product_handlers.get(dut.model[0:2])):
+        return [
+            tr.SkipTestCases(
+                device=self.device,
+                message=f"Missing: device {self.device.name} model: {dut.model} support for "
+                f"testcases: {testcases.get_service_name()}",
+            )
+        ]
+
+    return await handler(dut, testcases)
 
 
-def get_dut(device: Device, testcases_dir: Path):
+async def _meraki_mx_tc_switchports(
+    dut: "MerakiDeviceUnderTest", testcases: SwitchportTestCases
+) -> tr.CollectionTestResults:
+    ...
 
-    if device.os_name != "meraki":
-        raise RuntimeError(
-            f"Missing required DUT class for device {device.name}, os_name: {device.os_name}"
-        )
 
-    dut_by_product = {"MX": MerakiMXDeviceUnderTest, "MS": MerakiMSDeviceUnderTest}
+async def _meraki_ms_tc_switchports(
+    dut: "MerakiDeviceUnderTest", testcases: SwitchportTestCases
+) -> tr.CollectionTestResults:
 
-    if not (dut_cls := dut_by_product.get(device.product_model[0:2])):
-        raise RuntimeError(
-            f"Missing required DUT product-model for device {device.name}, "
-            f"model: {device.product_model}"
-        )
-
-    return dut_cls(device=device, testcases_dir=testcases_dir)
+    ...

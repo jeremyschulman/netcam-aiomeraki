@@ -18,20 +18,22 @@
 
 from typing import Optional, Dict
 from os import environ
-from functools import partial, cached_property
+from functools import partial, cached_property, singledispatchmethod
 
 # -----------------------------------------------------------------------------
 # Public Imports
 # -----------------------------------------------------------------------------
 
 from netcad.netcam.dut import AsyncDeviceUnderTest
+from netcad.netcam import CollectionTestResults
+from netcad.testing_services import TestCases
 from meraki.aio import AsyncDashboardAPI
 
 # -----------------------------------------------------------------------------
 # Exports
 # -----------------------------------------------------------------------------
 
-__all__ = ["MerakiDeviceUnderTest"]
+__all__ = ["MerakiDeviceUnderTest", "TestCases", "CollectionTestResults"]
 
 
 # -----------------------------------------------------------------------------
@@ -96,18 +98,16 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
             resp = await call(organizationId=self.meraki_orgid, name=self.device.name)
             self.meraki_device = resp[0]
 
+    @singledispatchmethod
+    async def execute_testcases(
+        self, testcases: TestCases
+    ) -> Optional["CollectionTestResults"]:
+        return None
+
     # -------------------------------------------------------------------------
     # Support the 'device' testcases
     # -------------------------------------------------------------------------
 
     from .meraki_tc_device import meraki_tc_device_info
 
-    AsyncDeviceUnderTest.execute_testcases.register(meraki_tc_device_info)
-
-    # -------------------------------------------------------------------------
-    # Support the 'interfaces' testcases
-    # -------------------------------------------------------------------------
-
-    from .meraki_tc_interfaces import meraki_tc_interfaces
-
-    AsyncDeviceUnderTest.execute_testcases.register(meraki_tc_interfaces)
+    execute_testcases.register(meraki_tc_device_info)

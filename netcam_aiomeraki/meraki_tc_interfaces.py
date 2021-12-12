@@ -45,7 +45,7 @@ if TYPE_CHECKING:
 # Exports
 # -----------------------------------------------------------------------------
 
-__all__ = ["meraki_tc_interfaces"]
+__all__ = ["meraki_switch_tc_interfaces"]
 
 # -----------------------------------------------------------------------------
 #
@@ -54,24 +54,37 @@ __all__ = ["meraki_tc_interfaces"]
 # -----------------------------------------------------------------------------
 
 
-async def meraki_tc_interfaces(
-    self, testcases: InterfaceTestCases
-) -> Optional[tr.CollectionTestResults]:
-    dut: MerakiDeviceUnderTest = self
+# async def meraki_tc_interfaces(
+#     self, testcases: InterfaceTestCases
+# ) -> Optional[tr.CollectionTestResults]:
+#     """
+#
+#     Parameters
+#     ----------
+#     self
+#     testcases
+#
+#     Returns
+#     -------
+#     List of the test case results, or None if testing is not supported on this
+#     Meraki model.
+#     """
+#
+#     dut: MerakiDeviceUnderTest = self
+#
+#     # The "MX" platform interface status checks are currently not supported.
+#     # TODO: investigating the Meraki Dashboard API for support.
+#     #       https://github.com/meraki/dashboard-api-python/issues
+#
+#     if dut.model.startswith("MX"):
+#         return None
+#
+#     # For now, supporting MS switch product
+#     results = await _meraki_switch_tc_interfaces(dut, testcases)
+#     return results
 
-    # The "MX" platform interface status checks are currently not supported.
-    # TODO: investigating the Meraki Dashboard API for support.
-    #       https://github.com/meraki/dashboard-api-python/issues
 
-    if dut.model.startswith("MX"):
-        return None
-
-    # For now, supporting MS switch product
-    results = await _meraki_switch_tc_interfaces(dut, testcases)
-    return results
-
-
-async def _meraki_switch_tc_interfaces(
+async def meraki_switch_tc_interfaces(
     dut, testcases: InterfaceTestCases
 ) -> Optional[tr.CollectionTestResults]:
 
