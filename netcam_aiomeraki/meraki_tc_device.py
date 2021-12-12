@@ -1,27 +1,29 @@
 # -----------------------------------------------------------------------------
-# System Imports
+# System Impors
 # -----------------------------------------------------------------------------
 
-import importlib.metadata as importlib_metadata
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 # -----------------------------------------------------------------------------
-# Public Imports
+# Public Impors
 # -----------------------------------------------------------------------------
 
-from netcad.device import Device
+from netcad.topology.tc_device_info import DeviceInformationTestCases
 
 # -----------------------------------------------------------------------------
-# Private Imports
+# Private Improts
 # -----------------------------------------------------------------------------
 
-from netcam_aiomeraki.meraki_dut import MerakiDeviceUnderTest
+if TYPE_CHECKING:
+    from .meraki_dut import MerakiDeviceUnderTest
+
+from .tc_helpers import pass_fail_field
 
 # -----------------------------------------------------------------------------
 # Exports
 # -----------------------------------------------------------------------------
 
-__all__ = ["__version__", "get_dut"]
+__all__ = ["meraki_tc_device_info"]
 
 # -----------------------------------------------------------------------------
 #
@@ -29,16 +31,20 @@ __all__ = ["__version__", "get_dut"]
 #
 # -----------------------------------------------------------------------------
 
-__version__ = importlib_metadata.version(__name__)
 
-SUPPORTED_OS_NAMES = {"meraki": MerakiDeviceUnderTest}
+async def meraki_tc_device_info(self, testcases: DeviceInformationTestCases):
+    dut: MerakiDeviceUnderTest = self
 
+    testcase = testcases.tests[0]
+    exp_values = testcase.expected_results
 
-def get_dut(device: Device, testcases_dir: Path):
+    expd_product_model = exp_values.product_model
+    msrd_product_model = dut.meraki_device["model"]
 
-    if not (dut_cls := SUPPORTED_OS_NAMES.get(device.os_name)):
-        raise RuntimeError(
-            f"Missing required DUT class for device {device.name}, os_name: {device.os_name}"
-        )
-
-    return dut_cls(device=device, testcases_dir=testcases_dir)
+    yield pass_fail_field(
+        dut.device,
+        testcase,
+        field="model",
+        expd_value=expd_product_model,
+        msrd_value=msrd_product_model,
+    )
