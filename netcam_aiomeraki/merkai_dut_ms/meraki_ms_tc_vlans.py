@@ -131,17 +131,18 @@ def _test_one_vlan(
     # find all interfaces where this vlan ID is located.  We check both the
     # 'vlan' field for now
 
-    msrd_if_list = list()
+    msrd_if_list = set()
 
     for if_data in map_port_configs:
+
         if_name = if_data["portId"]
         if if_data["vlan"] == vlan_id:
-            msrd_if_list.append(if_name)
+            msrd_if_list.add(if_name)
 
         if if_data["type"] == "trunk" and if_data["allowedVlans"] == "all":
-            msrd_if_list.append(if_name)
+            msrd_if_list.add(if_name)
 
-    if set(msrd_if_list) != set(expd_if_list):
+    if msrd_if_list != set(expd_if_list):
         results.append(
             trt.FailFieldMismatchResult(
                 device,
