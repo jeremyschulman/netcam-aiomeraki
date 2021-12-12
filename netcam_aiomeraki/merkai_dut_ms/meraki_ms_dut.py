@@ -31,9 +31,16 @@ from netcam_aiomeraki.meraki_dut import (
 
 
 class MerakiMSDeviceUnderTest(MerakiDeviceUnderTest):
+    async def get_port_config(self):
+        return await self.api_cache_get(
+            key="ports_config",
+            call="switch.getDeviceSwitchPorts",
+            serial=self.serial,
+        )
+
     async def get_port_status(self):
         return await self.api_cache_get(
-            key="port_status",
+            key="ports_status",
             call="switch.getDeviceSwitchPortsStatuses",
             serial=self.serial,
         )

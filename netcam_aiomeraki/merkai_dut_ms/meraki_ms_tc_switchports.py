@@ -11,18 +11,23 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-#
-#  Licensed under the Apache License, Version 2.0 (the "License");
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
+
+# example = {'portId': '10',
+#            'name': None,
+#            'tags': [],
+#            'enabled': True,
+#            'poeEnabled': False,
+#            'type': 'trunk',
+#            'vlan': 5,
+#            'voiceVlan': None,
+#            'allowedVlans': 'all',
+#            'isolationEnabled': False,
+#            'rstpEnabled': True,
+#            'stpGuard': 'loop guard',
+#            'linkNegotiation': '1 Gigabit full duplex (forced)',
+#            'portScheduleId': None,
+#            'udld': 'Alert only',
+#            'accessPolicyType': 'Open'}
 
 # -----------------------------------------------------------------------------
 # System Imports
@@ -35,7 +40,12 @@ from typing import TYPE_CHECKING
 # -----------------------------------------------------------------------------
 
 from netcad.netcam import tc_result_types as tr
-from netcad.vlan.tc_switchports import SwitchportTestCases
+
+from netcad.vlan.tc_switchports import (
+    SwitchportTestCases,
+    SwitchportAccessExpectation,
+    SwitchportTrunkExpectation,
+)
 
 # -----------------------------------------------------------------------------
 # Private Imports
@@ -43,6 +53,8 @@ from netcad.vlan.tc_switchports import SwitchportTestCases
 
 if TYPE_CHECKING:
     from .meraki_ms_dut import MerakiMSDeviceUnderTest
+
+from netcam_aiomeraki.tc_helpers import add_pass_if_nofail
 
 # -----------------------------------------------------------------------------
 # Exports
@@ -58,6 +70,112 @@ __all__ = ["meraki_ms_tc_switchports"]
 
 
 async def meraki_ms_tc_switchports(
-    dut: "MerakiMSDeviceUnderTest", testcases: SwitchportTestCases
+    self, testcases: SwitchportTestCases
 ) -> tr.CollectionTestResults:
-    ...
+
+    dut: MerakiMSDeviceUnderTest = self
+    device = dut.device
+    ports_config = await dut.get_port_config()
+    map_ports_config = {rec["portId"]: rec for rec in ports_config}
+
+    results = list()
+
+    for test_case in testcases.tests:
+        expd_status = test_case.expected_results
+
+        if_name = test_case.test_case_id()
+
+        # if the interface from the design does not exist on the device, then
+        # report this error and go to next test-case.
+
+        if not (msrd_port := map_ports_config.get(if_name)):
+            results.append(tr.FailNoExistsResult(device=device, test_case=test_case))
+            continue
+
+        # check the switchport mode value.  If they do not match, then we report
+        # the error and continue to the next test-case.
+
+        expd_mode = expd_status.switchport_mode
+        msrd_mode = msrd_port["type"]
+
+        if expd_mode != msrd_mode:
+            results.append(
+                tr.FailFieldMismatchResult(
+                    device=device,
+                    test_case=test_case,
+                    field="switchport_mode",
+                    measurement=msrd_mode,
+                )
+            )
+            continue
+
+        mode_handler = {
+            "access": _check_access_switchport,
+            "trunk": _check_trunk_switchport,
+        }.get(expd_mode)
+
+        results.extend(
+            add_pass_if_nofail(
+                device,
+                test_case,
+                measurement=msrd_port,
+                results=mode_handler(dut, test_case, expd_status, msrd_port),
+            )
+        )
+
+    return results
+
+
+def _check_access_switchport(
+    dut, test_case, expd_status: SwitchportAccessExpectation, msrd_status: dict
+) -> tr.CollectionTestResults:
+    """
+    Only one check for now, that is to validate that the configured VLAN on the
+    access port matches the test case.
+    """
+    device = dut.device
+    vl_id = expd_status.vlan.vlan_id
+    results = list()
+
+    if vl_id and (msrd_vl_id := msrd_status["vlan"]) != vl_id:
+        results.append(
+            tr.FailFieldMismatchResult(
+                device=device,
+                test_case=test_case,
+                field="vlan",
+                expected=vl_id,
+                measurement=msrd_vl_id,
+            )
+        )
+
+    return results
+
+
+def _check_trunk_switchport(
+    dut, test_case, expd_status: SwitchportTrunkExpectation, msrd_status: dict
+) -> tr.CollectionTestResults:
+
+    device = dut.device
+    results = list()
+
+    # if there is a native vlan expected, then validate the match.
+
+    n_vl_id = expd_status.native_vlan.vlan_id if expd_status.native_vlan else None
+    if n_vl_id and (msrd_vl_id := msrd_status["vlan"]) != n_vl_id:
+        results.append(
+            tr.FailFieldMismatchResult(
+                device=device,
+                test_case=test_case,
+                field="native_vlan",
+                expected=n_vl_id,
+                measurement=msrd_vl_id,
+            )
+        )
+
+    msrd_allowd_vlans = msrd_status["allowedVlans"]
+    if msrd_allowd_vlans != "all":
+        raise RuntimeError(
+            "Missing code handling for explict list of trunk allowed vlans"
+        )
+
+    return results
