@@ -25,6 +25,7 @@ from functools import partial, cached_property, singledispatchmethod, reduce
 # Public Imports
 # -----------------------------------------------------------------------------
 
+from netcad.logger import get_logger
 from netcad.netcam.dut import AsyncDeviceUnderTest
 from netcad.netcam import CollectionTestResults
 from netcad.testing_services import TestCases
@@ -141,13 +142,16 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
         The setup process retrieves the Meraki dashboard device object and
         assignes DUT properties.
         """
+        log = get_logger()
+
         async with self.meraki_api() as api:
             call = api.organizations.getOrganizationDevices
             resp = await call(organizationId=self.meraki_orgid, name=self.device.name)
             self.meraki_device = resp[0]
 
-        await self.ping_check()
+        log.info(f"DUT: {self.device.name}: Running connectivity ping check ...")
 
+        await self.ping_check()
         if not self.meraki_device_reachable:
             raise RuntimeError("Device fails reachability ping-check")
 

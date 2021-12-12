@@ -110,6 +110,14 @@ class MerakiMXDeviceUnderTest(MerakiDeviceUnderTest):
     execute_testcases.register(meraki_mx_tc_cabling)
 
     # -------------------------------------------------------------------------
+    # Support the 'ipaddrs' testcases
+    # -------------------------------------------------------------------------
+
+    from .meraki_mx_tc_ipaddrs import meraki_mx_tc_ipaddrs
+
+    execute_testcases.register(meraki_mx_tc_ipaddrs)
+
+    # -------------------------------------------------------------------------
     # Support the 'switchports' testcases
     # -------------------------------------------------------------------------
 
