@@ -64,6 +64,7 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
 
         # the device object assigned in the `setup` method
         self.meraki_device: Optional[Dict] = None
+        self.meraki_device_reachable = False
 
         # create a cache for API data, access and usage should only be done with
         # api_cache_get method.
@@ -105,6 +106,30 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
 
             return has_data
 
+    async def ping_check(self, timeout=5):
+        ping_check = {"status": "none"}
+
+        async with self.meraki_api() as api:
+            ping_device = await api.devices.createDeviceLiveToolsPingDevice(
+                serial=self.serial
+            )
+
+            while timeout:
+                await asyncio.sleep(1)
+
+                ping_check = await api.devices.getDeviceLiveToolsPingDevice(
+                    serial=self.serial, id=ping_device["pingId"]
+                )
+
+                if ping_check["status"] == "complete":
+                    break
+
+                timeout -= 1
+
+        # set the DUT attribute to indicate if the device is reachable.
+        self.meraki_device_reachable = ping_check["status"] == "complete"
+        return ping_check
+
     # -------------------------------------------------------------------------
     #
     #                              DUT METHODS
@@ -120,6 +145,11 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
             call = api.organizations.getOrganizationDevices
             resp = await call(organizationId=self.meraki_orgid, name=self.device.name)
             self.meraki_device = resp[0]
+
+        await self.ping_check()
+
+        if not self.meraki_device_reachable:
+            raise RuntimeError("Device fails reachability ping-check")
 
     @singledispatchmethod
     async def execute_testcases(

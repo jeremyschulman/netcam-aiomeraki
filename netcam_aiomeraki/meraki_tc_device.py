@@ -16,14 +16,14 @@
 # System Impors
 # -----------------------------------------------------------------------------
 
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING
 
 # -----------------------------------------------------------------------------
 # Public Impors
 # -----------------------------------------------------------------------------
 
 from netcad.topology.tc_device_info import DeviceInformationTestCases
-from netcad.netcam import ResultsTestCase
+from netcad.netcam import tc_result_types as trt, any_failures
 
 # -----------------------------------------------------------------------------
 # Private Improts
@@ -31,8 +31,6 @@ from netcad.netcam import ResultsTestCase
 
 if TYPE_CHECKING:
     from .meraki_dut import MerakiDeviceUnderTest
-
-from .tc_helpers import pass_fail_field
 
 # -----------------------------------------------------------------------------
 # Exports
@@ -49,21 +47,35 @@ __all__ = ["meraki_tc_device_info"]
 
 async def meraki_tc_device_info(
     self, testcases: DeviceInformationTestCases
-) -> List[ResultsTestCase]:
-    dut: MerakiDeviceUnderTest = self
+) -> trt.CollectionTestResults:
 
+    dut: MerakiDeviceUnderTest = self
+    device = dut.device
+
+    results = list()
     testcase = testcases.tests[0]
     exp_values = testcase.expected_results
+
+    # check for matching product model.
 
     expd_product_model = exp_values.product_model
     msrd_product_model = dut.meraki_device["model"]
 
-    return [
-        pass_fail_field(
-            dut.device,
-            testcase,
-            field="model",
-            expd_value=expd_product_model,
-            msrd_value=msrd_product_model,
+    if msrd_product_model != expd_product_model:
+        results.append(
+            trt.FailFieldMismatchResult(
+                device=device,
+                test_case=testcase,
+                field="product_model",
+                measurement=msrd_product_model,
+            )
         )
-    ]
+
+    if not any_failures(results):
+        results.append(
+            trt.PassTestCase(
+                device=device, test_case=testcase, measurement=exp_values.dict()
+            )
+        )
+
+    return results
