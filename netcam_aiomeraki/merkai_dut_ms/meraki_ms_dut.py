@@ -45,6 +45,12 @@ class MerakiMSDeviceUnderTest(MerakiDeviceUnderTest):
             serial=self.serial,
         )
 
+    async def get_vlans(self):
+        return await self.api_cache_get(
+            key="vlans",
+            call="",
+        )
+
     # -------------------------------------------------------------------------
     #
     #                           DUT Methods
@@ -72,3 +78,11 @@ class MerakiMSDeviceUnderTest(MerakiDeviceUnderTest):
     from .meraki_ms_tc_switchports import meraki_ms_tc_switchports
 
     execute_testcases.register(meraki_ms_tc_switchports)
+
+    # -------------------------------------------------------------------------
+    # Support the 'vlans' testcases
+    # -------------------------------------------------------------------------
+
+    from .meraki_ms_tc_vlans import meraki_ms_tc_vlans
+
+    execute_testcases.register(meraki_ms_tc_vlans)
