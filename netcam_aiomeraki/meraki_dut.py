@@ -37,13 +37,14 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
         self.meraki_api = partial(AsyncDashboardAPI, suppress_logging=True)
         self.meraki_orgid = environ["MERAKI_ORGID"]
         self.meraki_device: Optional[Dict] = None
+        self.meraki_device_sn: Optional[str] = None
 
     async def setup(self):
         async with self.meraki_api() as api:
             call = api.organizations.getOrganizationDevices
-            self.meraki_device = await call(
-                organizationId=self.meraki_orgid, name=self.device.name
-            )
+            resp = await call(organizationId=self.meraki_orgid, name=self.device.name)
+            self.meraki_device = resp[0]
+            self.meraki_device_sn = self.meraki_device["serial"]
 
     @singledispatchmethod
     async def execute_testcases(self, testcases: TestCases) -> AsyncGenerator:
@@ -67,3 +68,19 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
         # docs say the client must be used.  Tried other method and it does not
         # work in non-context-manager form.  TODO: investigate further.
         pass
+
+    # -------------------------------------------------------------------------
+    # Support the 'device' testcases
+    # -------------------------------------------------------------------------
+
+    from .meraki_tc_device import meraki_tc_device_info
+
+    execute_testcases.register(meraki_tc_device_info)
+
+    # -------------------------------------------------------------------------
+    # Support the 'interfaces' testcases
+    # -------------------------------------------------------------------------
+
+    from .meraki_tc_interfaces import meraki_tc_interfaces
+
+    execute_testcases.register(meraki_tc_interfaces)
