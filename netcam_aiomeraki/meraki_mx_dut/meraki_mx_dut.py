@@ -76,6 +76,13 @@ class MerakiMXDeviceUnderTest(MerakiDeviceUnderTest):
             networkId=self.network_id,
         )
 
+    async def get_vlans(self):
+        return await self.api_cache_get(
+            key="vlans",
+            call="appliance.getNetworkApplianceVlans",
+            networkId=self.network_id,
+        )
+
     # -------------------------------------------------------------------------
     #
     #                           DUT Methods
