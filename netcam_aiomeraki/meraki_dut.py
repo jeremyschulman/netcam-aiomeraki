@@ -18,7 +18,7 @@
 
 from typing import Optional, Dict
 from os import environ
-from functools import partial
+from functools import partial, cached_property
 
 # -----------------------------------------------------------------------------
 # Public Imports
@@ -59,18 +59,32 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
 
         self.meraki_orgid = environ["MERAKI_ORGID"]
 
-        # property values assigned in the `setup` method, these are used
-        # throughout the testcase executors when making calls to the Meraki
-        # Dashboard API.
-
-        # the device object
+        # the device object assigned in the `setup` method
         self.meraki_device: Optional[Dict] = None
 
-        # the network ID associated to the device
-        self.meraki_netid: Optional[str] = None
+    # -------------------------------------------------------------------------
+    #
+    #                            PROPERTIES
+    #
+    # -------------------------------------------------------------------------
 
-        # The device serial-number
-        self.meraki_device_sn: Optional[str] = None
+    @cached_property
+    def model(self):
+        return self.meraki_device["model"]
+
+    @cached_property
+    def serial(self):
+        return self.meraki_device["serial"]
+
+    @cached_property
+    def network_id(self):
+        return self.meraki_device["networkId"]
+
+    # -------------------------------------------------------------------------
+    #
+    #                              DUT METHODS
+    #
+    # -------------------------------------------------------------------------
 
     async def setup(self):
         """
@@ -81,15 +95,6 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
             call = api.organizations.getOrganizationDevices
             resp = await call(organizationId=self.meraki_orgid, name=self.device.name)
             self.meraki_device = resp[0]
-            self.meraki_device_sn = self.meraki_device["serial"]
-            self.meraki_netid = self.meraki_device["networkId"]
-
-    async def teardown(self):
-        # no teardown process as each call to the Meraki API must be done as
-        # part of a context manager.  dunno why that is, but that is how the
-        # docs say the client must be used.  Tried other method and it does not
-        # work in non-context-manager form.  TODO: investigate further.
-        pass
 
     # -------------------------------------------------------------------------
     # Support the 'device' testcases

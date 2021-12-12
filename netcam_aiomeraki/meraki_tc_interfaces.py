@@ -58,15 +58,24 @@ async def meraki_tc_interfaces(
     self, testcases: InterfaceTestCases
 ) -> Optional[tr.CollectionTestResults]:
     dut: MerakiDeviceUnderTest = self
-    device = dut.device
 
     # The "MX" platform interface status checks are currently not supported.
     # TODO: investigating the Meraki Dashboard API for support.
     #       https://github.com/meraki/dashboard-api-python/issues
 
-    if dut.meraki_device["model"].startswith("MX"):
+    if dut.model.startswith("MX"):
         return None
 
+    # For now, supporting MS switch product
+    results = await _meraki_switch_tc_interfaces(dut, testcases)
+    return results
+
+
+async def _meraki_switch_tc_interfaces(
+    dut, testcases: InterfaceTestCases
+) -> Optional[tr.CollectionTestResults]:
+
+    device = dut.device
     map_port_status = await get_ports_status(dut)
     results = list()
 
@@ -74,14 +83,13 @@ async def meraki_tc_interfaces(
         if_name = test_case.test_case_id()
 
         if not (msrd_status := map_port_status.get(if_name)):
-            # TODO: Management is in the design file, but the device
-            #       does not have it. This means we need to update the
-            #       device-type spec in Netbox and re-sync.
-            #       report this as a failing condition for now
+            # design is attempting to use an interface that does not exist on
+            # the device.  Report this as an error, and continue to next
+            # test-case.
             results.append(tr.FailNoExistsResult(device=device, test_case=test_case))
             continue
 
-        results_iface = meraki_check_one_interface(
+        results_iface = meraki_check_switch_one_interface(
             device=device, test_case=test_case, measurement=msrd_status
         )
 
@@ -135,7 +143,7 @@ async def get_ports_status(dut: "MerakiDeviceUnderTest") -> Dict:
     if model.startswith("MS"):
         async with dut.meraki_api() as api:
             status_list = await api.switch.getDeviceSwitchPortsStatuses(
-                serial=dut.meraki_device_sn
+                serial=dut.serial
             )
 
         return {
@@ -157,7 +165,7 @@ async def get_ports_status(dut: "MerakiDeviceUnderTest") -> Dict:
     #         )
 
 
-def meraki_check_one_interface(
+def meraki_check_switch_one_interface(
     device: Device,
     test_case: InterfaceTestCase,
     measurement: SwitchInterfaceMeasurement,
