@@ -69,6 +69,13 @@ class MerakiMXDeviceUnderTest(MerakiDeviceUnderTest):
             serial=self.serial,
         )
 
+    async def get_switchports(self):
+        return await self.api_cache_get(
+            key="switchports",
+            call="appliance.getNetworkAppliancePorts",
+            networkId=self.network_id,
+        )
+
     # -------------------------------------------------------------------------
     #
     #                           DUT Methods
@@ -94,3 +101,11 @@ class MerakiMXDeviceUnderTest(MerakiDeviceUnderTest):
     from .meraki_mx_tc_cabling import meraki_mx_tc_cabling
 
     execute_testcases.register(meraki_mx_tc_cabling)
+
+    # -------------------------------------------------------------------------
+    # Support the 'switchports' testcases
+    # -------------------------------------------------------------------------
+
+    from .meraki_mx_tc_switchports import meraki_mx_tc_switchports
+
+    execute_testcases.register(meraki_mx_tc_switchports)
