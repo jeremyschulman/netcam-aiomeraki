@@ -64,6 +64,14 @@ class MerakiMSDeviceUnderTest(MerakiDeviceUnderTest):
         return await super().execute_testcases(testcases)
 
     # -------------------------------------------------------------------------
+    # Support the 'cabling' testcases
+    # -------------------------------------------------------------------------
+
+    from .meraki_ms_tc_cabling import meraki_ms_tc_cabling
+
+    execute_testcases.register(meraki_ms_tc_cabling)
+
+    # -------------------------------------------------------------------------
     # Support the 'interfaces' testcases
     # -------------------------------------------------------------------------
 
