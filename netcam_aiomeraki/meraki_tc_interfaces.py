@@ -55,6 +55,14 @@ async def meraki_tc_interfaces(self, testcases: InterfaceTestCases) -> AsyncGene
     for test_case in testcases.tests:
         if_name = test_case.test_case_id()
 
+        if dut.meraki_device["model"].startswith("MX"):
+            yield tr.InfoTestCase(
+                device=device,
+                test_case=test_case,
+                measurement="MX interface status not supported",
+            )
+            continue
+
         if not (msrd_status := map_port_status.get(if_name)):
             # TODO: Management is in the design file, but the device
             #       does not have it. This means we need to update the
@@ -105,16 +113,26 @@ class SwitchInterfaceMeasurement(BaseModel):
 
 
 async def get_ports_status(dut: "MerakiDeviceUnderTest") -> Dict:
+    model = dut.meraki_device["model"]
 
-    async with dut.meraki_api() as api:
-        status_list = await api.switch.getDeviceSwitchPortsStatuses(
-            serial=dut.meraki_device_sn
-        )
+    if model.startswith("MS"):
+        async with dut.meraki_api() as api:
+            status_list = await api.switch.getDeviceSwitchPortsStatuses(
+                serial=dut.meraki_device_sn
+            )
 
-    return {
-        port_st["portId"]: SwitchInterfaceMeasurement.from_api(port_st)
-        for port_st in status_list
-    }
+        return {
+            port_st["portId"]: SwitchInterfaceMeasurement.from_api(port_st)
+            for port_st in status_list
+        }
+
+    elif model.startswith("MX"):
+        net_id = dut.meraki_device["networkId"]
+
+        async with dut.meraki_api() as api:
+            status_list = await api.appliance.getNetworkAppliancePorts(
+                networkId=net_id,
+            )
 
 
 def meraki_check_one_interface(
