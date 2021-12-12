@@ -1,0 +1,66 @@
+[
+   {
+      "id": 43,
+      "networkId": "L_646829496481104515",
+      "name": "STRINGERS",
+      "applianceIp": "192.168.43.1",
+      "subnet": "192.168.43.0/24",
+      "groupPolicyId": "100",
+      "fixedIpAssignments": {},
+      "reservedIpRanges": [
+         {
+            "start": "192.168.43.1",
+            "end": "192.168.43.20",
+            "comment": "Misc"
+         }
+      ],
+      "dnsNameservers": "google_dns",
+      "dhcpHandling": "Run a DHCP server",
+      "dhcpLeaseTime": "4 hours",
+      "dhcpBootOptionsEnabled": false,
+      "dhcpOptions": [
+         {
+            "type": "text",
+            "code": "15",
+            "value": "mlbstringers.com"
+         }
+      ],
+      "mandatoryDhcp": {
+         "enabled": false
+      }
+   },
+   {
+      "id": 150,
+      "networkId": "L_646829496481104515",
+      "name": "VPN_TRANSIT",
+      "applianceIp": "172.31.255.169",
+      "subnet": "172.31.255.168/29",
+      "fixedIpAssignments": {},
+      "reservedIpRanges": [],
+      "dnsNameservers": "upstream_dns",
+      "dhcpHandling": "Run a DHCP server",
+      "dhcpLeaseTime": "1 day",
+      "dhcpBootOptionsEnabled": false,
+      "dhcpOptions": [],
+      "mandatoryDhcp": {
+         "enabled": false
+      }
+   },
+   {
+      "id": 999,
+      "networkId": "L_646829496481104515",
+      "name": "OOB_NETWORK",
+      "applianceIp": "172.31.10.81",
+      "subnet": "172.31.10.80/28",
+      "fixedIpAssignments": {},
+      "reservedIpRanges": [],
+      "dnsNameservers": "upstream_dns",
+      "dhcpHandling": "Run a DHCP server",
+      "dhcpLeaseTime": "1 day",
+      "dhcpBootOptionsEnabled": false,
+      "dhcpOptions": [],
+      "mandatoryDhcp": {
+         "enabled": false
+      }
+   }
+]

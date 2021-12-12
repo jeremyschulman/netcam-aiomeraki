@@ -1,10 +1,27 @@
+#  Copyright 2021 Jeremy Schulman
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+
+from typing import List
+
+
 # -----------------------------------------------------------------------------
 # Public Impors
 # -----------------------------------------------------------------------------
 
 from netcad.device import Device
 from netcad.testing_services import TestCase
-from netcad.netcam import PassTestCase, FailFieldMismatchResult
+from netcad.netcam import PassTestCase, FailFieldMismatchResult, FailTestCase
 
 
 def pass_fail_field(device: Device, test_case: TestCase, expd_value, msrd_value, field):
@@ -16,3 +33,12 @@ def pass_fail_field(device: Device, test_case: TestCase, expd_value, msrd_value,
     return FailFieldMismatchResult(
         device=device, test_case=test_case, field=field, measurement=msrd_value
     )
+
+
+def add_pass_if_nofail(device, test_case, measurement, results: List) -> List:
+
+    if not any(isinstance(res, FailTestCase) for res in results):
+        results.append(
+            PassTestCase(device=device, test_case=test_case, measurement=measurement)
+        )
+    return results

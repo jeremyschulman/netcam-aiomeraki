@@ -1,0 +1,320 @@
+[
+   {
+      "portId": "1",
+      "enabled": false,
+      "status": "Disabled",
+      "errors": [
+         "Port disabled",
+         "Port disconnected"
+      ],
+      "warnings": [],
+      "speed": "",
+      "duplex": "",
+      "usageInKb": {
+         "total": 0,
+         "sent": 0,
+         "recv": 0
+      },
+      "clientCount": 0,
+      "powerUsageInWh": 0.0,
+      "trafficInKbps": {
+         "total": 0,
+         "sent": 0,
+         "recv": 0
+      },
+      "secureConnect": {
+         "enabled": false,
+         "active": false,
+         "authenticationStatus": "Disabled",
+         "configOverrides": {}
+      }
+   },
+   {
+      "portId": "2",
+      "enabled": false,
+      "status": "Disabled",
+      "errors": [
+         "Port disabled",
+         "Port disconnected"
+      ],
+      "warnings": [],
+      "speed": "",
+      "duplex": "",
+      "usageInKb": {
+         "total": 0,
+         "sent": 0,
+         "recv": 0
+      },
+      "clientCount": 0,
+      "powerUsageInWh": 0.0,
+      "trafficInKbps": {
+         "total": 0,
+         "sent": 0,
+         "recv": 0
+      },
+      "secureConnect": {
+         "enabled": false,
+         "active": false,
+         "authenticationStatus": "Disabled",
+         "configOverrides": {}
+      }
+   },
+   {
+      "portId": "3",
+      "enabled": true,
+      "status": "Connected",
+      "errors": [],
+      "warnings": [],
+      "speed": "1 Gbps",
+      "duplex": "full",
+      "usageInKb": {
+         "total": 539362,
+         "sent": 482293,
+         "recv": 57069
+      },
+      "lldp": {
+         "portId": "04:d9:f5:51:76:b6",
+         "chassisId": "04:d9:f5:51:76:b6"
+      },
+      "clientCount": 2,
+      "powerUsageInWh": 0.0,
+      "trafficInKbps": {
+         "total": 50.0,
+         "sent": 44.7,
+         "recv": 5.3
+      },
+      "secureConnect": {
+         "enabled": false,
+         "active": false,
+         "authenticationStatus": "Disabled",
+         "configOverrides": {}
+      }
+   },
+   {
+      "portId": "4",
+      "enabled": true,
+      "status": "Connected",
+      "errors": [],
+      "warnings": [],
+      "speed": "1 Gbps",
+      "duplex": "full",
+      "usageInKb": {
+         "total": 477960,
+         "sent": 422362,
+         "recv": 55598
+      },
+      "lldp": {
+         "portId": "04:d9:f5:51:77:0a",
+         "chassisId": "04:d9:f5:51:77:0a"
+      },
+      "clientCount": 2,
+      "powerUsageInWh": 0.0,
+      "trafficInKbps": {
+         "total": 44.2,
+         "sent": 39.1,
+         "recv": 5.1
+      },
+      "secureConnect": {
+         "enabled": false,
+         "active": false,
+         "authenticationStatus": "Disabled",
+         "configOverrides": {}
+      }
+   },
+   {
+      "portId": "5",
+      "enabled": true,
+      "status": "Connected",
+      "errors": [],
+      "warnings": [],
+      "speed": "1 Gbps",
+      "duplex": "full",
+      "usageInKb": {
+         "total": 491603,
+         "sent": 434636,
+         "recv": 56967
+      },
+      "lldp": {
+         "portId": "04:d9:f5:51:55:08",
+         "chassisId": "04:d9:f5:51:55:08"
+      },
+      "clientCount": 2,
+      "powerUsageInWh": 0.0,
+      "trafficInKbps": {
+         "total": 45.5,
+         "sent": 40.2,
+         "recv": 5.3
+      },
+      "secureConnect": {
+         "enabled": false,
+         "active": false,
+         "authenticationStatus": "Disabled",
+         "configOverrides": {}
+      }
+   },
+   {
+      "portId": "6",
+      "enabled": true,
+      "status": "Connected",
+      "errors": [],
+      "warnings": [],
+      "speed": "1 Gbps",
+      "duplex": "full",
+      "usageInKb": {
+         "total": 482119,
+         "sent": 428043,
+         "recv": 54076
+      },
+      "lldp": {
+         "portId": "04:d9:f5:51:76:7e",
+         "chassisId": "04:d9:f5:51:76:7e"
+      },
+      "clientCount": 2,
+      "powerUsageInWh": 0.0,
+      "trafficInKbps": {
+         "total": 44.6,
+         "sent": 39.6,
+         "recv": 5.0
+      },
+      "secureConnect": {
+         "enabled": false,
+         "active": false,
+         "authenticationStatus": "Disabled",
+         "configOverrides": {}
+      }
+   },
+   {
+      "portId": "7",
+      "enabled": true,
+      "status": "Connected",
+      "errors": [],
+      "warnings": [],
+      "speed": "1 Gbps",
+      "duplex": "full",
+      "usageInKb": {
+         "total": 483653,
+         "sent": 429413,
+         "recv": 54240
+      },
+      "lldp": {
+         "portId": "04:d9:f5:51:74:4e",
+         "chassisId": "04:d9:f5:51:74:4e"
+      },
+      "clientCount": 2,
+      "powerUsageInWh": 0.0,
+      "trafficInKbps": {
+         "total": 44.8,
+         "sent": 39.8,
+         "recv": 5.0
+      },
+      "secureConnect": {
+         "enabled": false,
+         "active": false,
+         "authenticationStatus": "Disabled",
+         "configOverrides": {}
+      }
+   },
+   {
+      "portId": "8",
+      "enabled": true,
+      "status": "Connected",
+      "errors": [],
+      "warnings": [],
+      "speed": "1 Gbps",
+      "duplex": "full",
+      "usageInKb": {
+         "total": 493391,
+         "sent": 432918,
+         "recv": 60473
+      },
+      "lldp": {
+         "portId": "04:d9:f5:51:76:f6",
+         "chassisId": "04:d9:f5:51:76:f6"
+      },
+      "clientCount": 2,
+      "powerUsageInWh": 0.0,
+      "trafficInKbps": {
+         "total": 45.7,
+         "sent": 40.1,
+         "recv": 5.6
+      },
+      "secureConnect": {
+         "enabled": false,
+         "active": false,
+         "authenticationStatus": "Disabled",
+         "configOverrides": {}
+      }
+   },
+   {
+      "portId": "9",
+      "enabled": true,
+      "status": "Connected",
+      "errors": [],
+      "warnings": [],
+      "speed": "1 Gbps",
+      "duplex": "full",
+      "usageInKb": {
+         "total": 704120,
+         "sent": 384599,
+         "recv": 319521
+      },
+      "lldp": {
+         "systemName": "sp01.slm.fsl.neteng.mlbinfra.net",
+         "systemDescription": "Arista Networks EOS version 4.24.5M running on an Arista Networks DCS-7050SX3-48YC8",
+         "portId": "Ethernet45",
+         "chassisId": "94:8e:d3:0b:bf:99",
+         "portVlan": 5,
+         "managementAddress": "172.31.229.1",
+         "systemCapabilities": "S-VLAN Component of a VLAN Bridge",
+         "portDescription": "lf01.slm.fsl-9"
+      },
+      "clientCount": 6,
+      "trafficInKbps": {
+         "total": 65.2,
+         "sent": 35.6,
+         "recv": 29.6
+      },
+      "secureConnect": {
+         "enabled": false,
+         "active": false,
+         "authenticationStatus": "Disabled",
+         "configOverrides": {}
+      }
+   },
+   {
+      "portId": "10",
+      "enabled": true,
+      "status": "Connected",
+      "errors": [],
+      "warnings": [],
+      "speed": "1 Gbps",
+      "duplex": "full",
+      "usageInKb": {
+         "total": 493538,
+         "sent": 492893,
+         "recv": 645
+      },
+      "lldp": {
+         "systemName": "sp01.slm.fsl.neteng.mlbinfra.net",
+         "systemDescription": "Arista Networks EOS version 4.24.5M running on an Arista Networks DCS-7050SX3-48YC8",
+         "portId": "Ethernet46",
+         "chassisId": "94:8e:d3:0b:bf:99",
+         "portVlan": 5,
+         "managementAddress": "172.31.229.1",
+         "systemCapabilities": "S-VLAN Component of a VLAN Bridge",
+         "portDescription": "lf01.slm.fsl-10"
+      },
+      "clientCount": 0,
+      "trafficInKbps": {
+         "total": 45.7,
+         "sent": 45.6,
+         "recv": 0.1
+      },
+      "secureConnect": {
+         "enabled": false,
+         "active": false,
+         "authenticationStatus": "Disabled",
+         "configOverrides": {}
+      }
+   }
+]

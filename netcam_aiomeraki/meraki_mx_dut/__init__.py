@@ -12,8 +12,4 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from netcam_aiomeraki import __version__
-
-
-def test_version():
-    assert __version__ == "0.1.0"
+from .meraki_mx_dut import MerakiMXDeviceUnderTest
