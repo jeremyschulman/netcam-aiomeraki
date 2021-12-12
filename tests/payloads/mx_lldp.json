@@ -1,0 +1,37 @@
+{
+   "ports": {
+      "wan0": {
+         "lldp": {
+            "sourcePort": "wan0",
+            "systemName": "PSL-IDF02",
+            "managementAddress": "10.131.2.12",
+            "portId": "2/38"
+         }
+      },
+      "port9": {
+         "lldp": {
+            "sourcePort": "port9",
+            "systemName": "sp01.slm.fsl.neteng.mlbinfra.net",
+            "managementAddress": "172.31.229.1",
+            "portId": "Ethernet47"
+         }
+      },
+      "port10": {
+         "lldp": {
+            "sourcePort": "port10",
+            "systemName": "sp01.slm.fsl.neteng.mlbinfra.net",
+            "managementAddress": "172.31.229.1",
+            "portId": "Ethernet48"
+         }
+      },
+      "port3": {
+         "lldp": {
+            "sourcePort": "port3",
+            "systemName": "sp01.slm.fsl.neteng.mlbinfra.net",
+            "managementAddress": "172.31.229.1",
+            "portId": "Management1"
+         }
+      }
+   },
+   "sourceMac": "68:3a:1e:21:68:5c"
+}

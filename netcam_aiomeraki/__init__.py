@@ -29,9 +29,9 @@ from netcad.device import Device
 # Private Imports
 # -----------------------------------------------------------------------------
 
-from netcam_aiomeraki.meraki_dut_mx import MerakiMXDeviceUnderTest
+from netcam_aiomeraki.meraki_mx_dut.meraki_mx_dut import MerakiMXDeviceUnderTest
 
-from .merkai_dut_ms import MerakiMSDeviceUnderTest
+from .merkai_ms_dut import MerakiMSDeviceUnderTest
 
 
 # -----------------------------------------------------------------------------
