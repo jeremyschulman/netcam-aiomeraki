@@ -2,8 +2,7 @@
 # System Imports
 # -----------------------------------------------------------------------------
 
-from typing import TYPE_CHECKING, Generator, AsyncGenerator, Dict
-from itertools import chain
+from typing import TYPE_CHECKING, Dict, Optional
 
 # -----------------------------------------------------------------------------
 # Public Imports
@@ -28,9 +27,6 @@ from netcad.topology.tc_interfaces import (
 if TYPE_CHECKING:
     from .meraki_dut import MerakiDeviceUnderTest
 
-from .tc_helpers import pass_fail_field
-
-
 # -----------------------------------------------------------------------------
 # Exports
 # -----------------------------------------------------------------------------
@@ -44,41 +40,48 @@ __all__ = ["meraki_tc_interfaces"]
 # -----------------------------------------------------------------------------
 
 
-async def meraki_tc_interfaces(self, testcases: InterfaceTestCases) -> AsyncGenerator:
+async def meraki_tc_interfaces(
+    self, testcases: InterfaceTestCases
+) -> Optional[tr.CollectionTestResults]:
     dut: MerakiDeviceUnderTest = self
     device = dut.device
 
-    map_port_status = await get_ports_status(dut)
+    # The "MX" platform interface status checks are currently not supported.
+    # TODO: investigating the Meraki Dashboard API for support.
+    #       https://github.com/meraki/dashboard-api-python/issues
 
-    tcr_generators = list()
+    if dut.meraki_device["model"].startswith("MX"):
+        return None
+
+    map_port_status = await get_ports_status(dut)
+    results = list()
 
     for test_case in testcases.tests:
         if_name = test_case.test_case_id()
-
-        if dut.meraki_device["model"].startswith("MX"):
-            yield tr.InfoTestCase(
-                device=device,
-                test_case=test_case,
-                measurement="MX interface status not supported",
-            )
-            continue
 
         if not (msrd_status := map_port_status.get(if_name)):
             # TODO: Management is in the design file, but the device
             #       does not have it. This means we need to update the
             #       device-type spec in Netbox and re-sync.
+            #       report this as a failing condition for now
+            results.append(tr.FailNoExistsResult(device=device, test_case=test_case))
             continue
 
-        tcr_generators.append(
-            meraki_check_one_interface(
-                device=device, test_case=test_case, measurement=msrd_status
-            )
+        results_iface = meraki_check_one_interface(
+            device=device, test_case=test_case, measurement=msrd_status
         )
 
-    # execute each of the coroutines yielding generated test case results.
+        if not any(isinstance(res, tr.FailTestCase) for res in results_iface):
+            results_iface.append(
+                tr.PassTestCase(
+                    device=device, test_case=test_case, measurement=msrd_status.dict()
+                )
+            )
 
-    for result in chain.from_iterable(tcr_generators):
-        yield result
+        results.extend(results_iface)
+
+    # return the collection of the test case results.
+    return results
 
 
 # -----------------------------------------------------------------------------
@@ -126,20 +129,25 @@ async def get_ports_status(dut: "MerakiDeviceUnderTest") -> Dict:
             for port_st in status_list
         }
 
-    elif model.startswith("MX"):
-        net_id = dut.meraki_device["networkId"]
+    else:
+        raise RuntimeError(
+            f"{dut.device.name}: Unsupported: Meraki device port status for model: {model}"
+        )
 
-        async with dut.meraki_api() as api:
-            status_list = await api.appliance.getNetworkAppliancePorts(
-                networkId=net_id,
-            )
+    # elif model.startswith("MX"):
+    #     net_id = dut.meraki_device["networkId"]
+    #
+    #     async with dut.meraki_api() as api:
+    #         status_list = await api.appliance.getNetworkAppliancePorts(
+    #             networkId=net_id,
+    #         )
 
 
 def meraki_check_one_interface(
     device: Device,
     test_case: InterfaceTestCase,
     measurement: SwitchInterfaceMeasurement,
-) -> Generator:
+) -> tr.CollectionTestResults:
 
     if_flags = test_case.test_params.interface_flags or {}
     is_reserved = if_flags.get("is_reserved", False)
@@ -151,13 +159,14 @@ def meraki_check_one_interface(
     # -------------------------------------------------------------------------
 
     if is_reserved:
-        yield tr.InfoTestCase(
-            device=device,
-            test_case=test_case,
-            field="is_reserved",
-            measurement=measurement.dict(),
-        )
-        return
+        return [
+            tr.InfoTestCase(
+                device=device,
+                test_case=test_case,
+                field="is_reserved",
+                measurement=measurement.dict(),
+            )
+        ]
 
     # -------------------------------------------------------------------------
     # Check the 'used' status.  Then if the interface is not being used, then no
@@ -167,41 +176,36 @@ def meraki_check_one_interface(
     results = list()
 
     if should_oper_status.used != measurement.used:
-        res = tr.FailFieldMismatchResult(
-            device=device,
-            test_case=test_case,
-            field="used",
-            measurement=measurement.used,
+        results.append(
+            tr.FailFieldMismatchResult(
+                device=device,
+                test_case=test_case,
+                field="used",
+                measurement=measurement.used,
+            )
         )
-        results.append(res)
-        yield res
 
     if not should_oper_status.used:
-        return
+        return results
 
-    res = pass_fail_field(
-        device,
-        test_case=test_case,
-        field="oper_up",
-        expd_value=should_oper_status.oper_up,
-        msrd_value=measurement.oper_up,
-    )
-
-    yield res
-    results.append(res)
-
-    res = pass_fail_field(
-        device,
-        test_case=test_case,
-        field="speed",
-        expd_value=should_oper_status.oper_up,
-        msrd_value=measurement.oper_up,
-    )
-
-    yield res
-    results.append(res)
-
-    if all(isinstance(res, tr.PassTestCase) for res in results):
-        yield tr.PassTestCase(
-            device=device, test_case=test_case, measurement=measurement.dict()
+    if should_oper_status.oper_up != measurement.oper_up:
+        results.append(
+            tr.FailFieldMismatchResult(
+                device=device,
+                test_case=test_case,
+                field="oper_up",
+                measurement=measurement.oper_up,
+            )
         )
+
+    if should_oper_status.speed != measurement.speed:
+        results.append(
+            tr.FailFieldMismatchResult(
+                device=device,
+                test_case=test_case,
+                field="speed",
+                measurement=measurement.speed,
+            )
+        )
+
+    return results

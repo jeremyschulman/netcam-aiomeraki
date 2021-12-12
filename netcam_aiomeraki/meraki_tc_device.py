@@ -2,13 +2,14 @@
 # System Impors
 # -----------------------------------------------------------------------------
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 # -----------------------------------------------------------------------------
 # Public Impors
 # -----------------------------------------------------------------------------
 
 from netcad.topology.tc_device_info import DeviceInformationTestCases
+from netcad.netcam import ResultsTestCase
 
 # -----------------------------------------------------------------------------
 # Private Improts
@@ -32,7 +33,9 @@ __all__ = ["meraki_tc_device_info"]
 # -----------------------------------------------------------------------------
 
 
-async def meraki_tc_device_info(self, testcases: DeviceInformationTestCases):
+async def meraki_tc_device_info(
+    self, testcases: DeviceInformationTestCases
+) -> List[ResultsTestCase]:
     dut: MerakiDeviceUnderTest = self
 
     testcase = testcases.tests[0]
@@ -41,10 +44,12 @@ async def meraki_tc_device_info(self, testcases: DeviceInformationTestCases):
     expd_product_model = exp_values.product_model
     msrd_product_model = dut.meraki_device["model"]
 
-    yield pass_fail_field(
-        dut.device,
-        testcase,
-        field="model",
-        expd_value=expd_product_model,
-        msrd_value=msrd_product_model,
-    )
+    return [
+        pass_fail_field(
+            dut.device,
+            testcase,
+            field="model",
+            expd_value=expd_product_model,
+            msrd_value=msrd_product_model,
+        )
+    ]
