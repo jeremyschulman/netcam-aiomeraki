@@ -16,9 +16,10 @@
 # Systme Imports
 # -----------------------------------------------------------------------------
 
+import asyncio
 from typing import Optional, Dict
 from os import environ
-from functools import partial, cached_property, singledispatchmethod
+from functools import partial, cached_property, singledispatchmethod, reduce
 
 # -----------------------------------------------------------------------------
 # Public Imports
@@ -64,6 +65,12 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
         # the device object assigned in the `setup` method
         self.meraki_device: Optional[Dict] = None
 
+        # create a cache for API data, access and usage should only be done with
+        # api_cache_get method.
+
+        self._api_cache_lock = asyncio.Lock()
+        self._api_cache = dict()
+
     # -------------------------------------------------------------------------
     #
     #                            PROPERTIES
@@ -81,6 +88,22 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
     @cached_property
     def network_id(self):
         return self.meraki_device["networkId"]
+
+    # -------------------------------------------------------------------------
+    #
+    #                         Meraki Dashboard Methods
+    #
+    # -------------------------------------------------------------------------
+
+    async def api_cache_get(self, key: str, call: str, **kwargs):
+        async with self._api_cache_lock:
+            if not (has_data := self._api_cache.get(key)):
+                async with self.meraki_api() as api:
+                    meth = reduce(getattr, call.split("."), api)
+                    has_data = await meth(**kwargs)
+                    self._api_cache[key] = has_data
+
+            return has_data
 
     # -------------------------------------------------------------------------
     #

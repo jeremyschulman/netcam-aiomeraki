@@ -30,7 +30,8 @@ from netcad.device import Device
 # -----------------------------------------------------------------------------
 
 from netcam_aiomeraki.meraki_dut_mx import MerakiMXDeviceUnderTest
-from netcam_aiomeraki.meraki_dut_ms import MerakiMSDeviceUnderTest
+
+from .merkai_dut_ms import MerakiMSDeviceUnderTest
 
 
 # -----------------------------------------------------------------------------

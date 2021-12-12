@@ -16,7 +16,7 @@
 # System Imports
 # -----------------------------------------------------------------------------
 
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import Optional
 
 # -----------------------------------------------------------------------------
 # Public Imports
@@ -33,13 +33,10 @@ from netcad.topology.tc_interfaces import (
     InterfaceTestCase,
 )
 
-
 # -----------------------------------------------------------------------------
 # Private Imports
 # -----------------------------------------------------------------------------
 
-if TYPE_CHECKING:
-    from .meraki_dut import MerakiDeviceUnderTest
 
 # -----------------------------------------------------------------------------
 # Exports
@@ -54,42 +51,18 @@ __all__ = ["meraki_switch_tc_interfaces"]
 # -----------------------------------------------------------------------------
 
 
-# async def meraki_tc_interfaces(
-#     self, testcases: InterfaceTestCases
-# ) -> Optional[tr.CollectionTestResults]:
-#     """
-#
-#     Parameters
-#     ----------
-#     self
-#     testcases
-#
-#     Returns
-#     -------
-#     List of the test case results, or None if testing is not supported on this
-#     Meraki model.
-#     """
-#
-#     dut: MerakiDeviceUnderTest = self
-#
-#     # The "MX" platform interface status checks are currently not supported.
-#     # TODO: investigating the Meraki Dashboard API for support.
-#     #       https://github.com/meraki/dashboard-api-python/issues
-#
-#     if dut.model.startswith("MX"):
-#         return None
-#
-#     # For now, supporting MS switch product
-#     results = await _meraki_switch_tc_interfaces(dut, testcases)
-#     return results
-
-
 async def meraki_switch_tc_interfaces(
     dut, testcases: InterfaceTestCases
 ) -> Optional[tr.CollectionTestResults]:
 
     device = dut.device
-    map_port_status = await get_ports_status(dut)
+
+    status_list = await dut.get_port_status()
+    map_port_status = {
+        port_st["portId"]: SwitchInterfaceMeasurement.from_api(port_st)
+        for port_st in status_list
+    }
+
     results = list()
 
     for test_case in testcases.tests:
@@ -148,34 +121,6 @@ class SwitchInterfaceMeasurement(BaseModel):
             oper_up=api_payload["status"] == "Connected",
             speed=meraki_to_speed(api_payload["speed"]),
         )
-
-
-async def get_ports_status(dut: "MerakiDeviceUnderTest") -> Dict:
-    model = dut.meraki_device["model"]
-
-    if model.startswith("MS"):
-        async with dut.meraki_api() as api:
-            status_list = await api.switch.getDeviceSwitchPortsStatuses(
-                serial=dut.serial
-            )
-
-        return {
-            port_st["portId"]: SwitchInterfaceMeasurement.from_api(port_st)
-            for port_st in status_list
-        }
-
-    else:
-        raise RuntimeError(
-            f"{dut.device.name}: Unsupported: Meraki device port status for model: {model}"
-        )
-
-    # elif model.startswith("MX"):
-    #     net_id = dut.meraki_device["networkId"]
-    #
-    #     async with dut.meraki_api() as api:
-    #         status_list = await api.appliance.getNetworkAppliancePorts(
-    #             networkId=net_id,
-    #         )
 
 
 def meraki_check_switch_one_interface(

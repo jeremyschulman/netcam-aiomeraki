@@ -23,10 +23,27 @@ from functools import singledispatchmethod
 # Private Imports
 # -----------------------------------------------------------------------------
 
-from .meraki_dut import MerakiDeviceUnderTest, TestCases, CollectionTestResults
+from netcam_aiomeraki.meraki_dut import (
+    MerakiDeviceUnderTest,
+    TestCases,
+    CollectionTestResults,
+)
 
 
 class MerakiMSDeviceUnderTest(MerakiDeviceUnderTest):
+    async def get_port_status(self):
+        return await self.api_cache_get(
+            key="port_status",
+            call="switch.getDeviceSwitchPortsStatuses",
+            serial=self.serial,
+        )
+
+    # -------------------------------------------------------------------------
+    #
+    #                           DUT Methods
+    #
+    # -------------------------------------------------------------------------
+
     @singledispatchmethod
     async def execute_testcases(
         self, testcases: TestCases
@@ -37,6 +54,14 @@ class MerakiMSDeviceUnderTest(MerakiDeviceUnderTest):
     # Support the 'interfaces' testcases
     # -------------------------------------------------------------------------
 
-    from .meraki_tc_interfaces import meraki_switch_tc_interfaces
+    from .meraki_ms_tc_interfaces import meraki_switch_tc_interfaces
 
     execute_testcases.register(meraki_switch_tc_interfaces)
+
+    # -------------------------------------------------------------------------
+    # Support the 'switchports' testcases
+    # -------------------------------------------------------------------------
+
+    from .meraki_ms_tc_switchports import meraki_ms_tc_switchports
+
+    execute_testcases.register(meraki_ms_tc_switchports)
