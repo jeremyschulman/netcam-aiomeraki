@@ -90,6 +90,13 @@ async def meraki_ms_tc_cabling(
 # -----------------------------------------------------------------------------
 
 
+def meraki_hostname_match(expected, measured: str):
+    if not measured.startswith("Meraki"):
+        return False
+
+    return expected == measured.split()[-1]
+
+
 def _test_one_interface(
     device, test_case: InterfaceCablingTestCase, measurement: dict
 ) -> trt.CollectionTestResults:
@@ -111,7 +118,9 @@ def _test_one_interface(
     msrd_name = msrd_nei["systemName"]
     msrd_port_id = msrd_nei["portId"]
 
-    if not nei_hostname_match(expd_nei.device, msrd_name):
+    if not nei_hostname_match(expd_nei.device, msrd_name) and not meraki_hostname_match(
+        expd_nei.device, msrd_name
+    ):
         results.append(
             trt.FailFieldMismatchResult(
                 device=device,

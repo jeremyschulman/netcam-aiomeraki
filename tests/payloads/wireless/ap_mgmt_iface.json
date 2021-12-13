@@ -1,0 +1,13 @@
+{
+   "wan1": {
+      "usingStaticIp": true,
+      "staticIp": "172.31.229.22",
+      "staticSubnetMask": "255.255.255.240",
+      "staticGatewayIp": "172.31.229.18",
+      "staticDns": [
+         "8.8.8.8",
+         "209.102.194.1"
+      ],
+      "vlan": 26
+   }
+}

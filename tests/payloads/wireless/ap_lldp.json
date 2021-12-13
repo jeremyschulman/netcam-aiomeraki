@@ -1,0 +1,13 @@
+{
+   "ports": {
+      "wired0": {
+         "lldp": {
+            "sourcePort": "wired0",
+            "systemName": "Meraki MS120-8FP - lf02.slm.fsl",
+            "managementAddress": "172.31.229.21",
+            "portId": "8"
+         }
+      }
+   },
+   "sourceMac": "e0:cb:bc:52:81:2a"
+}
