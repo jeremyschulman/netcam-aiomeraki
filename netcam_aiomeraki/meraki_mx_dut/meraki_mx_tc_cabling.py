@@ -16,7 +16,7 @@
 # System Imports
 # -----------------------------------------------------------------------------
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 # -----------------------------------------------------------------------------
 # Public Imports
@@ -56,13 +56,17 @@ __all__ = ["meraki_mx_tc_cabling"]
 
 async def meraki_mx_tc_cabling(
     self, testcases: InterfaceCablingTestCases
-) -> trt.CollectionTestResults:
+) -> Optional[trt.CollectionTestResults]:
 
     dut: MerakiMXDeviceUnderTest = self
     device = dut.device
     results = list()
 
-    api_data = await dut.get_lldp_status()
+    # if for some reason, the MX device is not reporting any cabling,
+    # then return no results, and the User will see a "Skipped" indication.
+
+    if not (api_data := await dut.get_lldp_status()):
+        return None
 
     # create a mapping to the LLDP neighbor exclusive for the "port" interfaces.
     # there are other interfaces such as "wan" that are not of interest (yet).
