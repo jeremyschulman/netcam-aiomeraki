@@ -29,9 +29,9 @@ from netcad.device import Device
 # Private Imports
 # -----------------------------------------------------------------------------
 
-from netcam_aiomeraki.meraki_mx_dut.meraki_mx_dut import MerakiMXDeviceUnderTest
-
+from .meraki_mx_dut import MerakiMXDeviceUnderTest
 from .merkai_ms_dut import MerakiMSDeviceUnderTest
+from .meraki_wireless import MerakiWirelessDeviceUnderTest
 
 
 # -----------------------------------------------------------------------------
@@ -48,6 +48,12 @@ __all__ = ["__version__", "get_dut"]
 
 __version__ = importlib_metadata.version(__name__)
 
+dut_by_product = {
+    "MX": MerakiMXDeviceUnderTest,
+    "MS": MerakiMSDeviceUnderTest,
+    "MR": MerakiWirelessDeviceUnderTest,
+}
+
 
 def get_dut(device: Device, testcases_dir: Path):
 
@@ -55,8 +61,6 @@ def get_dut(device: Device, testcases_dir: Path):
         raise RuntimeError(
             f"Missing required DUT class for device {device.name}, os_name: {device.os_name}"
         )
-
-    dut_by_product = {"MX": MerakiMXDeviceUnderTest, "MS": MerakiMSDeviceUnderTest}
 
     if not (dut_cls := dut_by_product.get(device.product_model[0:2])):
         return None
