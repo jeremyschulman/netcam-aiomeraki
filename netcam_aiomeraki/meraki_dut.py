@@ -17,7 +17,7 @@
 # -----------------------------------------------------------------------------
 
 import asyncio
-from typing import Optional, Dict
+from typing import Optional, Dict, List, Union
 from os import environ
 from functools import partial, cached_property, singledispatchmethod, reduce
 
@@ -107,6 +107,55 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
 
             return has_data
 
+    async def get_inventory_device(
+        self, single=True, **kwargs
+    ) -> Optional[Union[List[Dict], Dict]]:
+        """
+        Obtain a device from the Meraki dashboard inventory.  The Caller can
+        provide any supported query parameters as defined by the Meraki API,
+        here:
+        https://developer.cisco.com/meraki/api-v1/#!get-organization-devices
+
+        Parameters
+        ----------
+        single: bool
+            When True (default), expect and return only one device record. This
+            is the common use-case to get one device.  That said, a Caller can
+            set this single=False, and this function will return a list of
+            dictionary objects that match the kwargs query params.
+
+        Other Parameters
+        ----------
+        kwargs:
+            As described.  For example "mac=<value>" would be used to located a
+            device by mac-address.  "name=<value>" would be used to locate a
+            device by hostname.
+
+        Returns
+        -------
+        None:
+            When the query returns no devices
+
+        dict:
+            When single=True, the device object payload from the API.
+
+        list[dict]:
+            When single=False, the list of device objects
+        """
+        async with self.meraki_api() as api:
+
+            api_data = await api.organizations.getOrganizationDevices(
+                organizationId=self.meraki_orgid, **kwargs
+            )
+
+            if not single:
+                return api_data
+
+            if not len(api_data):
+                return None
+
+            return api_data[0]
+
     async def ping_check(self, timeout=5):
         ping_check = {"status": "none"}
 
@@ -144,17 +193,15 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
         """
         log = get_logger()
 
-        async with self.meraki_api() as api:
-            call = api.organizations.getOrganizationDevices
-            resp = await call(organizationId=self.meraki_orgid, name=self.device.name)
-            if not len(resp):
-                raise RuntimeError(
-                    f"DUT: {self.device.name}: not found in Meraki Dashboard, check name in system"
-                )
+        if not (dev := await self.get_inventory_device(name=self.device.name)):
+            raise RuntimeError(
+                f"DUT: {self.device.name}: not found in Meraki Dashboard, check name in system"
+            )
 
-            self.meraki_device = resp[0]
+        self.meraki_device = dev
 
         log.info(f"DUT: {self.device.name}: Running connectivity ping check ...")
+
         await self.ping_check()
         if not self.meraki_device_reachable:
             raise RuntimeError("Device fails reachability ping-check")

@@ -106,6 +106,14 @@ optional = false
 python-versions = ">=3.5"
 
 [[package]]
+name = "macaddr"
+version = "2.1"
+description = "Working with network MAC addresses"
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "meraki"
 version = "1.15.0"
 description = "Cisco Meraki Dashboard API library"
@@ -258,7 +266,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "0e17aa1b431d43b0d915a378c8b6567463b8bea93e9bd69a36d887db0e35f18e"
+content-hash = "0c0c31b72ad7567c4d32ccd0403efa8d58174bd03476acdc91ea7f46cabb6224"
 
 [metadata.files]
 aiohttp = [
@@ -440,6 +448,10 @@ frozenlist = [
 idna = [
     {file = "idna-3.3-py3-none-any.whl", hash = "sha256:84d9dd047ffa80596e0f246e2eab0b391788b0503584e8945f2368256d2735ff"},
     {file = "idna-3.3.tar.gz", hash = "sha256:9d643ff0a55b762d5cdb124b8eaa99c66322e2157b69160bc32796e824360e6d"},
+]
+macaddr = [
+    {file = "macaddr-2.1-py3-none-any.whl", hash = "sha256:98ef79bf0b451114f76b7e329bbdd134a6b2ca63d6e5aae72f990ea2a33d80c3"},
+    {file = "macaddr-2.1.tar.gz", hash = "sha256:07bb34404774719284b336c8d920ec29a49c948e2351ed357d6ed64e2533ae90"},
 ]
 meraki = [
     {file = "meraki-1.15.0-py3-none-any.whl", hash = "sha256:b3c435180e18d81a8c8ca05b4c89bc3aed40c602fdf2d5eac1252acd56639724"},

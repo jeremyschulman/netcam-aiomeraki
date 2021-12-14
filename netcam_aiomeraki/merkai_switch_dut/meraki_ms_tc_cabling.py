@@ -22,6 +22,8 @@ from typing import TYPE_CHECKING
 # Public Imports
 # -----------------------------------------------------------------------------
 
+from macaddr import MacAddress
+
 from netcad.topology.tc_cabling_nei import (
     InterfaceCablingTestCases,
     InterfaceCablingTestCase,
@@ -74,11 +76,28 @@ async def meraki_ms_tc_cabling(
             results.append(trt.FailNoExistsResult(device=device, test_case=test_case))
             continue
 
-        results.extend(
-            _test_one_interface(
-                device=device, test_case=test_case, measurement=msrd_nei_status
+        if msrd_lldp_nei := msrd_nei_status.get("lldp"):
+            results.extend(
+                _test_one_lldp_interface(
+                    device=device, test_case=test_case, msrd_lldp_nei=msrd_lldp_nei
+                )
             )
-        )
+        elif msrd_cdp_nei := msrd_nei_status.get("cdp"):
+            nei_res = await _test_one_cdp_interface(
+                dut=dut, test_case=test_case, msrd_cdp_nei=msrd_cdp_nei
+            )
+            results.extend(nei_res)
+        else:
+            results.append(
+                trt.FailNoExistsResult(
+                    device=device,
+                    test_case=test_case,
+                    error=dict(
+                        message="Unexpcted API payload missing cdp|lldp",
+                        expected=test_case.expected_results.dict(),
+                    ),
+                )
+            )
 
     return results
 
@@ -90,6 +109,58 @@ async def meraki_ms_tc_cabling(
 # -----------------------------------------------------------------------------
 
 
+async def _test_one_cdp_interface(
+    dut: "MerakiMSDeviceUnderTest",
+    test_case: InterfaceCablingTestCase,
+    msrd_cdp_nei: dict,
+) -> trt.CollectionTestResults:
+
+    results = list()
+    device = dut.device
+
+    # For now we are going to expect the deviceId is a MAC address, and that MAC
+    # is associated with another Meraki device.  If this is not the case, then
+    # this CDP check is not supported, and will result in a failure measurement.
+
+    if "Meraki" not in (msrd_platform := (msrd_cdp_nei.get("platform", ""))):
+        return [
+            trt.FailNoExistsResult(
+                device=device,
+                test_case=test_case,
+                error=dict(
+                    message=f'CDP platform is not Meraki as expected: "{msrd_platform}"',
+                    expected=test_case.expected_results.dict(),
+                ),
+            )
+        ]
+
+    cdp_device_id = msrd_cdp_nei.get("deviceId", "")
+
+    try:
+        cdp_device_mac = MacAddress(cdp_device_id)
+
+    except ValueError:
+        return [
+            trt.FailNoExistsResult(
+                device=device,
+                test_case=test_case,
+                error=dict(
+                    message=f'CDP device ID not MAC as expected: "{cdp_device_id}"',
+                    expected=test_case.expected_results.dict(),
+                ),
+            )
+        ]
+
+    # Now that we have a known Meraki MAC address, we need to locate the device
+    # in the Meraki inventory.
+
+    cdp_dev_obj = await dut.get_inventory_device(mac=str(cdp_device_mac))  # noqa
+    # TODO: need to finish this coding, but not needed right now
+    # TODO: unfinished business ....
+
+    return results
+
+
 def meraki_hostname_match(expected, measured: str):
     if not measured.startswith("Meraki"):
         return False
@@ -97,26 +168,17 @@ def meraki_hostname_match(expected, measured: str):
     return expected == measured.split()[-1]
 
 
-def _test_one_interface(
-    device, test_case: InterfaceCablingTestCase, measurement: dict
+def _test_one_lldp_interface(
+    device, test_case: InterfaceCablingTestCase, msrd_lldp_nei: dict
 ) -> trt.CollectionTestResults:
     results = list()
 
     expd_nei = test_case.expected_results
 
-    # for now only checking the LLDP status; not checking CDP.
-    # TODO: possibly support CDP if/when necessary
+    msrd_name = msrd_lldp_nei["systemName"]
+    msrd_port_id = msrd_lldp_nei["portId"]
 
-    if not (msrd_nei := measurement.get("lldp")):
-        results.append(
-            trt.FailNoExistsResult(
-                device=device, test_case=test_case, measurement=measurement
-            )
-        )
-        return results
-
-    msrd_name = msrd_nei["systemName"]
-    msrd_port_id = msrd_nei["portId"]
+    # ensure the expected hostname matches
 
     if not nei_hostname_match(expd_nei.device, msrd_name) and not meraki_hostname_match(
         expd_nei.device, msrd_name
@@ -130,6 +192,8 @@ def _test_one_interface(
             )
         )
 
+    # ensure the expected pot-id matches
+
     if not nei_interface_match(expd_nei.port_id, msrd_port_id):
         results.append(
             trt.FailFieldMismatchResult(
@@ -140,10 +204,12 @@ def _test_one_interface(
             )
         )
 
+    # if there are no failures then report the test case passes
+
     if not any_failures(results):
         results.append(
             trt.PassTestCase(
-                device=device, test_case=test_case, measurement=measurement
+                device=device, test_case=test_case, measurement=msrd_lldp_nei
             )
         )
 

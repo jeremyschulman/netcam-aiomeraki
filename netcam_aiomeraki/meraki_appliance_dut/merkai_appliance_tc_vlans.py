@@ -33,30 +33,36 @@ from netcad.helpers import parse_istrange
 # -----------------------------------------------------------------------------
 
 if TYPE_CHECKING:
-    from .meraki_ms_dut import MerakiMSDeviceUnderTest
+    from .meraki_appliance_dut import MerakiMXDeviceUnderTest
 
 
 # -----------------------------------------------------------------------------
 # Exports
 # -----------------------------------------------------------------------------
 
-__all__ = ["meraki_ms_tc_vlans"]
+__all__ = ["meraki_mx_tc_vlans"]
 
 
-async def meraki_ms_tc_vlans(
+async def meraki_mx_tc_vlans(
     self, testcases: VlanTestCases
 ) -> trt.CollectionTestResults:
-    dut: MerakiMSDeviceUnderTest = self
+    dut: MerakiMXDeviceUnderTest = self
     device = dut.device
     results = list()
 
     # the VLANs are obtained from the device ports config
 
-    msrd_ports_config = await dut.get_port_config()
+    msrd_ports_config = await dut.get_switchports()
 
-    # get the list of VLAN id values expected on this switch.
+    # get the list of VLAN id values expected on this switch, for only those
+    # VLANs that have interfaces assigned.  There are some cases where the VLAN
+    # is defined, but no interfaces; for example the native VLAN on trunk ports.
 
-    expd_vlan_ids = [tc.expected_results.vlan.vlan_id for tc in testcases.tests]
+    expd_vlan_ids = [
+        tc.expected_results.vlan.vlan_id
+        for tc in testcases.tests
+        if tc.expected_results.interfaces
+    ]
 
     map_vl2ifs = _correlate_vlans_to_ports(msrd_ports_config, expd_vlan_ids)
 
@@ -74,12 +80,25 @@ def _correlate_vlans_to_ports(port_configs: List, expd_vlan_ids: List) -> Dict:
 
     map_vlans_to_interfaces = defaultdict(set)
 
+    def is_unused_port(_data):
+        return (
+            _data["enabled"] is False
+            and _data["type"] == "trunk"
+            and _data["dropUntaggedTraffic"] is True
+        )
+
     for if_data in port_configs:
-        if_name = if_data["portId"]
+
+        if is_unused_port(if_data):
+            continue
+
+        if_name = str(if_data["number"])
 
         # if the port is access, then we only have one vlan to contend with.
 
-        map_vlans_to_interfaces[if_data["vlan"]].add(if_name)
+        if vlan_id := if_data.get("vlan"):
+            map_vlans_to_interfaces[vlan_id].add(if_name)
+
         if if_data["type"] == "access":
             continue
 
@@ -87,7 +106,9 @@ def _correlate_vlans_to_ports(port_configs: List, expd_vlan_ids: List) -> Dict:
         # the expected vlans on the switch.  Otherwise we parse the vlan-string
         # value and add those vlans.
 
-        if (msrd_allowd := if_data["allowedVlans"]) == "all":
+        if (msrd_allowd := if_data["allowedVlans"]) == "all" and (
+            if_data["enabled"] is True
+        ):
             add_vlan_ids = expd_vlan_ids
         else:
             add_vlan_ids = parse_istrange(msrd_allowd)
@@ -103,7 +124,7 @@ def _correlate_vlans_to_ports(port_configs: List, expd_vlan_ids: List) -> Dict:
         disabled = [
             port
             for port in port_configs
-            if (port["portId"] in vlan_1_ifaces) and (port["enabled"] is False)
+            if (str(port["number"]) in vlan_1_ifaces) and (port["enabled"] is False)
         ]
         if len(disabled) == len(vlan_1_ifaces):
             del map_vlans_to_interfaces[1]
@@ -161,12 +182,18 @@ def _test_one_vlan(
 
     vlan_id = int(test_case.test_case_id())
 
-    # The expect list of interface names (ports)
-    expd_if_list = test_case.expected_results.interfaces
+    # The expect list of interface names (ports), exclude the "Vlan" SVI
+    # interfaces, as those are checked by the "ipaddrs" test-case processing.
+
+    expd_if_set = {
+        if_name
+        for if_name in test_case.expected_results.interfaces
+        if not if_name.startswith("Vlan")
+    }
 
     msrd_if_set = vlans_to_intfs[vlan_id]
 
-    if msrd_if_set == set(expd_if_list):
+    if msrd_if_set == expd_if_set:
         return [
             trt.PassTestCase(
                 device=device, test_case=test_case, measurement=sorted(msrd_if_set)
@@ -179,7 +206,7 @@ def _test_one_vlan(
             test_case,
             "interfaces",
             measurement=sorted(msrd_if_set, key=int),
-            expected=sorted(expd_if_list, key=int),
+            expected=sorted(expd_if_set, key=int),
         )
     )
 

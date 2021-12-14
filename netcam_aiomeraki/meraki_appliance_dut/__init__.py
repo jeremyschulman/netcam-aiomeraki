@@ -12,4 +12,4 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from .meraki_mx_dut import MerakiMXDeviceUnderTest
+from .meraki_appliance_dut import MerakiMXDeviceUnderTest
