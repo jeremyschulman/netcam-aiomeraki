@@ -59,9 +59,6 @@ def get_dut(device: Device, testcases_dir: Path):
     dut_by_product = {"MX": MerakiMXDeviceUnderTest, "MS": MerakiMSDeviceUnderTest}
 
     if not (dut_cls := dut_by_product.get(device.product_model[0:2])):
-        raise RuntimeError(
-            f"Missing required DUT product-model for device {device.name}, "
-            f"model: {device.product_model}"
-        )
+        return None
 
     return dut_cls(device=device, testcases_dir=testcases_dir)

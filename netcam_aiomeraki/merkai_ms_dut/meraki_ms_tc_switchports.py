@@ -55,6 +55,7 @@ if TYPE_CHECKING:
     from .meraki_ms_dut import MerakiMSDeviceUnderTest
 
 from netcam_aiomeraki.tc_helpers import add_pass_if_nofail
+from netcad.helpers import range_string
 
 # -----------------------------------------------------------------------------
 # Exports
@@ -172,10 +173,32 @@ def _check_trunk_switchport(
             )
         )
 
+    # the trunk is either "all" or a CSV of vlans
+
     msrd_allowd_vlans = msrd_status["allowedVlans"]
+
+    # if all, then done checking; really should not be using "all", so
+    # TODO: add INFO report that all is being used.
     if msrd_allowd_vlans != "all":
-        raise RuntimeError(
-            "Missing code handling for explict list of trunk allowed vlans"
+        return results
+
+    e_tr_allowed_vids = sorted(
+        [vlan.vlan_id for vlan in expd_status.trunk_allowed_vlans]
+    )
+
+    # conver the list of vlan-ids to a range string for string comparison
+    # purposes.
+
+    e_tr_alwd_vstr = range_string(e_tr_allowed_vids)
+    if e_tr_alwd_vstr != msrd_allowd_vlans:
+        results.append(
+            tr.FailFieldMismatchResult(
+                device=device,
+                test_case=test_case,
+                field="trunk_allowed_vlans",
+                expected=e_tr_alwd_vstr,
+                measurement=msrd_allowd_vlans,
+            )
         )
 
     return results

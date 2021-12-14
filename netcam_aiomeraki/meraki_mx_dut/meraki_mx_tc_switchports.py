@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING
 # -----------------------------------------------------------------------------
 
 from netcad.netcam import tc_result_types as tr, any_failures
-from netcad.helpers import range_string
+from netcad.helpers import parse_istrange
 
 from netcad.vlan.tc_switchports import (
     SwitchportTestCases,
@@ -172,20 +172,18 @@ def _check_trunk_switchport(
     # create a CSV from the expected vlans. Then convert the list of vlan-ids to
     # a range string for string comparison purposes.
 
-    e_tr_allowed_vids = sorted(
-        [vlan.vlan_id for vlan in expd_status.trunk_allowed_vlans]
-    )
+    expd_set = {vlan.vlan_id for vlan in expd_status.trunk_allowed_vlans}
 
-    e_tr_alwd_vstr = range_string(e_tr_allowed_vids)
+    msrd_set = parse_istrange(msrd_allowd_vlans)
 
-    if e_tr_alwd_vstr != msrd_allowd_vlans:
+    if expd_set != msrd_set:
         results.append(
             tr.FailFieldMismatchResult(
                 device=device,
                 test_case=test_case,
                 field="trunk_allowed_vlans",
-                expected=e_tr_alwd_vstr,
-                measurement=msrd_allowd_vlans,
+                expected=sorted(expd_set),
+                measurement=sorted(msrd_set),
             )
         )
 

@@ -124,3 +124,11 @@ class MerakiMXDeviceUnderTest(MerakiDeviceUnderTest):
     from .meraki_mx_tc_switchports import meraki_mx_tc_switchports
 
     execute_testcases.register(meraki_mx_tc_switchports)
+
+    # -------------------------------------------------------------------------
+    # Support the 'vlans' testcases
+    # -------------------------------------------------------------------------
+
+    from .merkai_mx_tc_vlans import meraki_mx_tc_vlans
+
+    execute_testcases.register(meraki_mx_tc_vlans)

@@ -147,10 +147,14 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
         async with self.meraki_api() as api:
             call = api.organizations.getOrganizationDevices
             resp = await call(organizationId=self.meraki_orgid, name=self.device.name)
+            if not len(resp):
+                raise RuntimeError(
+                    f"DUT: {self.device.name}: not found in Meraki Dashboard, check name in system"
+                )
+
             self.meraki_device = resp[0]
 
         log.info(f"DUT: {self.device.name}: Running connectivity ping check ...")
-
         await self.ping_check()
         if not self.meraki_device_reachable:
             raise RuntimeError("Device fails reachability ping-check")
