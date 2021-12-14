@@ -78,7 +78,7 @@ async def meraki_ms_tc_cabling(
 
         if msrd_lldp_nei := msrd_nei_status.get("lldp"):
             results.extend(
-                _test_one_interface(
+                _test_one_lldp_interface(
                     device=device, test_case=test_case, msrd_lldp_nei=msrd_lldp_nei
                 )
             )
@@ -168,7 +168,7 @@ def meraki_hostname_match(expected, measured: str):
     return expected == measured.split()[-1]
 
 
-def _test_one_interface(
+def _test_one_lldp_interface(
     device, test_case: InterfaceCablingTestCase, msrd_lldp_nei: dict
 ) -> trt.CollectionTestResults:
     results = list()
@@ -177,6 +177,8 @@ def _test_one_interface(
 
     msrd_name = msrd_lldp_nei["systemName"]
     msrd_port_id = msrd_lldp_nei["portId"]
+
+    # ensure the expected hostname matches
 
     if not nei_hostname_match(expd_nei.device, msrd_name) and not meraki_hostname_match(
         expd_nei.device, msrd_name
@@ -190,6 +192,8 @@ def _test_one_interface(
             )
         )
 
+    # ensure the expected pot-id matches
+
     if not nei_interface_match(expd_nei.port_id, msrd_port_id):
         results.append(
             trt.FailFieldMismatchResult(
@@ -199,6 +203,8 @@ def _test_one_interface(
                 measurement=msrd_port_id,
             )
         )
+
+    # if there are no failures then report the test case passes
 
     if not any_failures(results):
         results.append(
