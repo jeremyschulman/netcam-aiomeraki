@@ -105,8 +105,10 @@ def meraki_to_speed(speed_str: str) -> int:
 
     if speed_str == "1 Gbps":
         return PhyPortSpeeds.speed_1G
+    elif speed_str == "100 Mbps":
+        return PhyPortSpeeds.speed_100M
 
-    raise RuntimeError(f"Unknown Meraki speed converstion for: {speed_str}")
+    raise RuntimeError(f"Unknown Meraki speed converstion for: '{speed_str}'")
 
 
 class SwitchInterfaceMeasurement(BaseModel):

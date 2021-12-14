@@ -105,15 +105,23 @@ class MerakiMXDeviceUnderTest(MerakiDeviceUnderTest):
     # Support the 'cabling' testcases
     # -------------------------------------------------------------------------
 
-    from .meraki_mx_tc_cabling import meraki_mx_tc_cabling
+    from .meraki_appliance_tc_cabling import meraki_mx_tc_cabling
 
     execute_testcases.register(meraki_mx_tc_cabling)
+
+    # -------------------------------------------------------------------------
+    # Support the 'interfaces' testcases
+    # -------------------------------------------------------------------------
+
+    from .meraki_appliance_tc_interfaces import meraki_appliance_tc_interfaces
+
+    execute_testcases.register(meraki_appliance_tc_interfaces)
 
     # -------------------------------------------------------------------------
     # Support the 'ipaddrs' testcases
     # -------------------------------------------------------------------------
 
-    from .meraki_mx_tc_ipaddrs import meraki_mx_tc_ipaddrs
+    from .meraki_appliance_tc_ipaddrs import meraki_mx_tc_ipaddrs
 
     execute_testcases.register(meraki_mx_tc_ipaddrs)
 
@@ -121,7 +129,7 @@ class MerakiMXDeviceUnderTest(MerakiDeviceUnderTest):
     # Support the 'switchports' testcases
     # -------------------------------------------------------------------------
 
-    from .meraki_mx_tc_switchports import meraki_mx_tc_switchports
+    from .meraki_appliance_tc_switchports import meraki_mx_tc_switchports
 
     execute_testcases.register(meraki_mx_tc_switchports)
 
@@ -129,6 +137,6 @@ class MerakiMXDeviceUnderTest(MerakiDeviceUnderTest):
     # Support the 'vlans' testcases
     # -------------------------------------------------------------------------
 
-    from .merkai_mx_tc_vlans import meraki_mx_tc_vlans
+    from .merkai_appliance_tc_vlans import meraki_mx_tc_vlans
 
     execute_testcases.register(meraki_mx_tc_vlans)

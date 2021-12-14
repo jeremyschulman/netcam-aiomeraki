@@ -16,29 +16,31 @@
 # System Imports
 # -----------------------------------------------------------------------------
 
-import importlib.metadata as importlib_metadata
-from pathlib import Path
+from typing import Optional
+from typing import TYPE_CHECKING
 
 # -----------------------------------------------------------------------------
 # Public Imports
 # -----------------------------------------------------------------------------
 
-from netcad.device import Device
+from netcad.netcam import tc_result_types as tr
+
+from netcad.topology.tc_interfaces import (
+    InterfaceTestCases,
+)
 
 # -----------------------------------------------------------------------------
 # Private Imports
 # -----------------------------------------------------------------------------
 
-from .meraki_appliance_dut import MerakiMXDeviceUnderTest
-from .merkai_switch_dut import MerakiMSDeviceUnderTest
-from .meraki_wireless import MerakiWirelessDeviceUnderTest
-
+if TYPE_CHECKING:
+    from .meraki_appliance_dut import MerakiMXDeviceUnderTest
 
 # -----------------------------------------------------------------------------
 # Exports
 # -----------------------------------------------------------------------------
 
-__all__ = ["__version__", "get_dut"]
+__all__ = ["meraki_appliance_tc_interfaces"]
 
 # -----------------------------------------------------------------------------
 #
@@ -46,23 +48,43 @@ __all__ = ["__version__", "get_dut"]
 #
 # -----------------------------------------------------------------------------
 
-__version__ = importlib_metadata.version(__name__)
 
-dut_by_product = {
-    "MX": MerakiMXDeviceUnderTest,
-    "MS": MerakiMSDeviceUnderTest,
-    "MR": MerakiWirelessDeviceUnderTest,
-}
+async def meraki_appliance_tc_interfaces(
+    dut, testcases: InterfaceTestCases
+) -> Optional[tr.CollectionTestResults]:
 
+    dut: MerakiMXDeviceUnderTest
+    device = dut.device
 
-def get_dut(device: Device, testcases_dir: Path):
+    api_data = await dut.get_switchports()
+    map_port_status = {str(port_st["number"]): port_st for port_st in api_data}
 
-    if device.os_name != "meraki":
-        raise RuntimeError(
-            f"Missing required DUT class for device {device.name}, os_name: {device.os_name}"
+    results = list()
+
+    for test_case in testcases.tests:
+        if_name = test_case.test_case_id()
+
+        # TODO: for now, only going to check the ports 3+, and not the wan
+        #       (ports 1,2).  The SVI is checked via the ipaddrs test cases.
+
+        if not (msrd_status := map_port_status.get(if_name)):
+            continue
+
+        msrd_used = msrd_status["enabled"] is True
+        if msrd_used != test_case.expected_results.used:
+            results.append(
+                tr.FailFieldMismatchResult(
+                    device=device,
+                    test_case=test_case,
+                    field="used",
+                    measurement=msrd_used,
+                )
+            )
+            continue
+
+        results.append(
+            tr.PassTestCase(device=device, test_case=test_case, measurement=msrd_status)
         )
 
-    if not (dut_cls := dut_by_product.get(device.product_model[0:2])):
-        return None
-
-    return dut_cls(device=device, testcases_dir=testcases_dir)
+    # return all testing results
+    return results
