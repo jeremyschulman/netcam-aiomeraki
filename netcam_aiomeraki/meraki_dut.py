@@ -209,7 +209,13 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
             # and try again.
 
             rt_exc: AsyncAPIErrorLike = retry_state.outcome.exception()
+            if not hasattr(rt_exc, "status"):
+                return False
+
             if rt_exc.status == HTTPStatus.TOO_MANY_REQUESTS:
+                log.info(
+                    f"DUT: {self.device.name}: Still working on Meraki ping request ..."
+                )
                 return True
 
             # otherwise, we've tried hard enough and we should stop trying.
@@ -238,9 +244,9 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
             try:
                 ping_job = await _create_ping(api)
 
-            except RetryError:
+            except (AsyncAPIError, RetryError):
                 log.error(
-                    f"DUT: {self.device.name}: Timeout starting ping check ... proceeding regardless"
+                    f"DUT: {self.device.name}: Timeout starting Meraki ping check ... proceeding regardless"
                 )
                 self.meraki_device_reachable = True
                 return ping_check
@@ -250,9 +256,9 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
 
                 try:
                     ping_check = await _check_ping(api, ping_job)
-                except RetryError:
+                except (AsyncAPIError, RetryError):
                     log.error(
-                        f"DUT: {self.device.name}: Timeout checking ping ... proceeding regardless"
+                        f"DUT: {self.device.name}: Timeout checking Meraki ping ... proceeding regardless"
                     )
                     self.meraki_device_reachable = True
                     return ping_check
@@ -286,7 +292,7 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
 
         self.meraki_device = dev
 
-        log.info(f"DUT: {self.device.name}: Running connectivity ping check ...")
+        log.info(f"DUT: {self.device.name}: Running Meraki connectivity ping check ...")
 
         await self.ping_check()
         if not self.meraki_device_reachable:
