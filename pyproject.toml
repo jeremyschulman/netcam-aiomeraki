@@ -10,9 +10,11 @@ python = "^3.8"
 meraki = "^1.15.0"
 aiohttp = "<4.0"
 macaddr = "^2.1"
+tenacity = "^8.0.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
+interrogate = "^1.5.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
