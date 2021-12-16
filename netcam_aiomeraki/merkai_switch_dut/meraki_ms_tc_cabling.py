@@ -115,7 +115,7 @@ async def _test_one_cdp_interface(
     msrd_cdp_nei: dict,
 ) -> trt.CollectionTestResults:
 
-    results = list()
+    # results = list()
     device = dut.device
 
     # For now we are going to expect the deviceId is a MAC address, and that MAC
@@ -137,7 +137,7 @@ async def _test_one_cdp_interface(
     cdp_device_id = msrd_cdp_nei.get("deviceId", "")
 
     try:
-        cdp_device_mac = MacAddress(cdp_device_id)
+        cdp_device_mac = MacAddress(cdp_device_id)      # noqa
 
     except ValueError:
         return [
@@ -154,11 +154,12 @@ async def _test_one_cdp_interface(
     # Now that we have a known Meraki MAC address, we need to locate the device
     # in the Meraki inventory.
 
-    cdp_dev_obj = await dut.get_inventory_device(mac=str(cdp_device_mac))  # noqa
+    # cdp_dev_obj = await dut.get_inventory_device(mac=str(cdp_device_mac))  # noqa
+
     # TODO: need to finish this coding, but not needed right now
     # TODO: unfinished business ....
 
-    return results
+    raise NotImplemented("Meraki Switch CDP cabling check")
 
 
 def meraki_hostname_match(expected, measured: str):
