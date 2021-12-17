@@ -137,7 +137,7 @@ async def _test_one_cdp_interface(
     cdp_device_id = msrd_cdp_nei.get("deviceId", "")
 
     try:
-        cdp_device_mac = MacAddress(cdp_device_id)      # noqa
+        cdp_device_mac = MacAddress(cdp_device_id)  # noqa
 
     except ValueError:
         return [
@@ -159,7 +159,7 @@ async def _test_one_cdp_interface(
     # TODO: need to finish this coding, but not needed right now
     # TODO: unfinished business ....
 
-    raise NotImplemented("Meraki Switch CDP cabling check")
+    raise NotImplementedError("Meraki Switch CDP cabling check")
 
 
 def meraki_hostname_match(expected, measured: str):
