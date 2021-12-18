@@ -33,7 +33,7 @@ from netcad.helpers import parse_istrange
 # -----------------------------------------------------------------------------
 
 if TYPE_CHECKING:
-    from .meraki_ms_dut import MerakiMSDeviceUnderTest
+    from .meraki_ms_dut import MerakiSwitchDeviceUnderTest
 
 
 # -----------------------------------------------------------------------------
@@ -46,7 +46,7 @@ __all__ = ["meraki_ms_tc_vlans"]
 async def meraki_ms_tc_vlans(
     self, testcases: VlanTestCases
 ) -> trt.CollectionTestResults:
-    dut: MerakiMSDeviceUnderTest = self
+    dut: MerakiSwitchDeviceUnderTest = self
     device = dut.device
     results = list()
 

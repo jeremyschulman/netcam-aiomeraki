@@ -15,7 +15,7 @@
 # -----------------------------------------------------------------------------
 # System Imports
 # -----------------------------------------------------------------------------
-
+import asyncio
 from typing import TYPE_CHECKING
 
 # -----------------------------------------------------------------------------
@@ -23,7 +23,6 @@ from typing import TYPE_CHECKING
 # -----------------------------------------------------------------------------
 
 from netcad.netcam import tc_result_types as tr, any_failures
-from netcad.helpers import parse_istrange
 
 from netcad.vlan.tc_switchports import (
     SwitchportTestCases,
@@ -36,14 +35,14 @@ from netcad.vlan.tc_switchports import (
 # -----------------------------------------------------------------------------
 
 if TYPE_CHECKING:
-    from .meraki_appliance_dut import MerakiMXDeviceUnderTest
+    from .meraki_wireless_dut import MerakiWirelessDeviceUnderTest
 
 
 # -----------------------------------------------------------------------------
 # Exports
 # -----------------------------------------------------------------------------
 
-__all__ = ["meraki_mx_tc_switchports"]
+__all__ = ["meraki_wireless_tc_switchports"]
 
 # -----------------------------------------------------------------------------
 #
@@ -52,21 +51,52 @@ __all__ = ["meraki_mx_tc_switchports"]
 # -----------------------------------------------------------------------------
 
 
-async def meraki_mx_tc_switchports(
+async def meraki_wireless_tc_switchports(
     self, testcases: SwitchportTestCases
 ) -> tr.CollectionTestResults:
+    """
+    The Meraki APs are not technically "switches", but the construct of switchports and
+    VLANs can be made by examining the SSID configurations for vlans in use.
 
-    dut: MerakiMXDeviceUnderTest = self
+    Notes
+    -----
+    Presently this code only supports Network wide SSID assignments and not
+    per-AP SSID/VLAN assignments
+
+    Returns
+    -------
+    List of test case results
+    """
+
+    dut: MerakiWirelessDeviceUnderTest = self
     device = dut.device
 
-    # The MX port data stores the port number as an int; need to convert to str
-    # to conform with test case id value.
+    # The VLANs used on the AP device include those configured on the SSIDs as
+    # we as one used for the managmeent interface of the AP itself.
 
-    api_data = await dut.get_switchports()
-    map_msrd_ports_lldpnei = {str(rec["number"]): rec for rec in api_data}
+    api_ssid_data, api_mgmt_data = await asyncio.gather(
+        dut.get_ssids(), dut.get_mgmt_iface()
+    )
+
+    msrd_vlan_ids = {
+        ssid_rec["defaultVlanId"]
+        for ssid_rec in api_ssid_data
+        if ssid_rec.get("useVlanTagging", False) is True
+    }
+
+    if vlan_mgmt := api_mgmt_data["wan1"].get("vlan"):
+        msrd_vlan_ids.add(vlan_mgmt)
+
+    # for now, the only "status" is the set of VLANs used by the SSIDs
+
+    map_msrd_status = dict(wired0=msrd_vlan_ids)
+
+    # technical speaking, at this time, there is only one interface test case
+    # for "wired0".  We will leave the looping construct here for now in case
+    # something new comes out in the product line; or we find new information
+    # about the behavior of the AP.
 
     results = list()
-
     for test_case in testcases.tests:
         expd_status = test_case.expected_results
 
@@ -75,33 +105,18 @@ async def meraki_mx_tc_switchports(
         # if the interface from the design does not exist on the device, then
         # report this error and go to next test-case.
 
-        if not (msrd_port := map_msrd_ports_lldpnei.get(if_name)):
+        if not (msrd_port := map_msrd_status.get(if_name)):
             results.append(tr.FailNoExistsResult(device=device, test_case=test_case))
             continue
 
         # check the switchport mode value.  If they do not match, then we report
         # the error and continue to the next test-case.
 
-        expd_mode = expd_status.switchport_mode
-        msrd_mode = msrd_port["type"]
+        # TODO: find where in the AP API there is the configuraiton for trunk
+        #       vs. access mode (if there is one).  For now we will skip the
+        #       switchport.mode check.
 
-        if expd_mode != msrd_mode:
-            results.append(
-                tr.FailFieldMismatchResult(
-                    device=device,
-                    test_case=test_case,
-                    field="switchport_mode",
-                    measurement=msrd_mode,
-                )
-            )
-            continue
-
-        mode_handler = {
-            "access": _check_access_switchport,
-            "trunk": _check_trunk_switchport,
-        }.get(expd_mode)
-
-        mode_results = mode_handler(dut, test_case, expd_status, msrd_port)
+        mode_results = _check_trunk_switchport(dut, test_case, expd_status, msrd_port)
         results.extend(mode_results)
 
         if not any_failures(mode_results):
@@ -140,7 +155,7 @@ def _check_access_switchport(
 
 
 def _check_trunk_switchport(
-    dut, test_case, expd_status: SwitchportTrunkExpectation, msrd_status: dict
+    dut, test_case, expd_status: SwitchportTrunkExpectation, msrd_status: set
 ) -> tr.CollectionTestResults:
 
     device = dut.device
@@ -148,25 +163,8 @@ def _check_trunk_switchport(
 
     # if there is a native vlan expected, then validate the match.
 
-    if msrd_status.get("dropUntaggedTraffic", False) is True:
-        # then not checking the native vlan.
-        pass
-    else:
-        n_vl_id = expd_status.native_vlan.vlan_id if expd_status.native_vlan else None
-        if n_vl_id and (msrd_vl_id := msrd_status["vlan"]) != n_vl_id:
-            results.append(
-                tr.FailFieldMismatchResult(
-                    device=device,
-                    test_case=test_case,
-                    field="native_vlan",
-                    expected=n_vl_id,
-                    measurement=msrd_vl_id,
-                )
-            )
-
-    msrd_allowd_vlans = msrd_status["allowedVlans"]
-    if msrd_allowd_vlans == "all":
-        return results
+    # TODO: need to determine if/how to validate the native-vlan setting.  Need
+    #       to find this in the API.
 
     # need to process the vlan list. Meraki provides this as a CSV we need to
     # create a CSV from the expected vlans. Then convert the list of vlan-ids to
@@ -174,7 +172,7 @@ def _check_trunk_switchport(
 
     expd_set = {vlan.vlan_id for vlan in expd_status.trunk_allowed_vlans}
 
-    msrd_set = parse_istrange(msrd_allowd_vlans)
+    msrd_set = msrd_status
 
     if expd_set != msrd_set:
         results.append(

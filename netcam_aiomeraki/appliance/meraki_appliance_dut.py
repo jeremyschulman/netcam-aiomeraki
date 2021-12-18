@@ -45,7 +45,7 @@ from netcam_aiomeraki.meraki_dut import (
 # Exports
 # -----------------------------------------------------------------------------
 
-__all__ = ["MerakiMXDeviceUnderTest"]
+__all__ = ["MerakiApplianceDeviceUnderTest"]
 
 # -----------------------------------------------------------------------------
 #
@@ -54,7 +54,7 @@ __all__ = ["MerakiMXDeviceUnderTest"]
 # -----------------------------------------------------------------------------
 
 
-class MerakiMXDeviceUnderTest(MerakiDeviceUnderTest):
+class MerakiApplianceDeviceUnderTest(MerakiDeviceUnderTest):
 
     # -------------------------------------------------------------------------
     #
@@ -105,9 +105,9 @@ class MerakiMXDeviceUnderTest(MerakiDeviceUnderTest):
     # Support the 'cabling' testcases
     # -------------------------------------------------------------------------
 
-    from .meraki_appliance_tc_cabling import meraki_mx_tc_cabling
+    from .meraki_appliance_tc_cabling import meraki_device_tc_cabling
 
-    execute_testcases.register(meraki_mx_tc_cabling)
+    execute_testcases.register(meraki_device_tc_cabling)
 
     # -------------------------------------------------------------------------
     # Support the 'interfaces' testcases
@@ -129,9 +129,9 @@ class MerakiMXDeviceUnderTest(MerakiDeviceUnderTest):
     # Support the 'switchports' testcases
     # -------------------------------------------------------------------------
 
-    from .meraki_appliance_tc_switchports import meraki_mx_tc_switchports
+    from .meraki_appliance_tc_switchports import meraki_appliance_tc_switchports
 
-    execute_testcases.register(meraki_mx_tc_switchports)
+    execute_testcases.register(meraki_appliance_tc_switchports)
 
     # -------------------------------------------------------------------------
     # Support the 'vlans' testcases

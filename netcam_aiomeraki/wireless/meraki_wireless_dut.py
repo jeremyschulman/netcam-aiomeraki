@@ -29,26 +29,22 @@ from netcam_aiomeraki.meraki_dut import (
     CollectionTestResults,
 )
 
+# -----------------------------------------------------------------------------
+# Exports
+# -----------------------------------------------------------------------------
 
-class MerakiMSDeviceUnderTest(MerakiDeviceUnderTest):
-    async def get_port_config(self):
-        return await self.api_cache_get(
-            key="ports_config",
-            call="switch.getDeviceSwitchPorts",
-            serial=self.serial,
-        )
+__all__ = ["MerakiWirelessDeviceUnderTest"]
 
-    async def get_port_status(self):
-        return await self.api_cache_get(
-            key="ports_status",
-            call="switch.getDeviceSwitchPortsStatuses",
-            serial=self.serial,
-        )
 
-    async def get_vlans(self):
+class MerakiWirelessDeviceUnderTest(MerakiDeviceUnderTest):
+    async def get_ssids(self):
+        """
+        The SSIDs configuration contains the specific vlans that are in use.
+        """
         return await self.api_cache_get(
-            key="vlans",
-            call="",
+            key="config_ssids",
+            call="wireless.getNetworkWirelessSsids",
+            networkId=self.network_id,
         )
 
     # -------------------------------------------------------------------------
@@ -61,36 +57,48 @@ class MerakiMSDeviceUnderTest(MerakiDeviceUnderTest):
     async def execute_testcases(
         self, testcases: TestCases
     ) -> Optional["CollectionTestResults"]:
+        """
+        If this DUT does not explicity implement a test-case, then try the
+        superclass.
+        """
         return await super().execute_testcases(testcases)
 
     # -------------------------------------------------------------------------
     # Support the 'cabling' testcases
     # -------------------------------------------------------------------------
 
-    from .meraki_ms_tc_cabling import meraki_ms_tc_cabling
+    from .meraki_wireless_tc_cabling import meraki_device_tc_cabling
 
-    execute_testcases.register(meraki_ms_tc_cabling)
+    execute_testcases.register(meraki_device_tc_cabling)
+
+    # -------------------------------------------------------------------------
+    # Support the 'ipaddrs' testcases
+    # -------------------------------------------------------------------------
+
+    from .meraki_wireless_tc_ipaddrs import meraki_wireless_tc_ipaddrs
+
+    execute_testcases.register(meraki_wireless_tc_ipaddrs)
 
     # -------------------------------------------------------------------------
     # Support the 'interfaces' testcases
     # -------------------------------------------------------------------------
 
-    from .meraki_ms_tc_interfaces import meraki_switch_tc_interfaces
+    from .meraki_wireless_tc_interfaces import meraki_wireless_tc_interfaces
 
-    execute_testcases.register(meraki_switch_tc_interfaces)
+    execute_testcases.register(meraki_wireless_tc_interfaces)
 
     # -------------------------------------------------------------------------
     # Support the 'switchports' testcases
     # -------------------------------------------------------------------------
 
-    from .meraki_ms_tc_switchports import meraki_ms_tc_switchports
+    from .meraki_wireless_tc_switchports import meraki_wireless_tc_switchports
 
-    execute_testcases.register(meraki_ms_tc_switchports)
+    execute_testcases.register(meraki_wireless_tc_switchports)
 
     # -------------------------------------------------------------------------
     # Support the 'vlans' testcases
     # -------------------------------------------------------------------------
 
-    from .meraki_ms_tc_vlans import meraki_ms_tc_vlans
+    from .merkai_wireless_tc_vlans import meraki_wireless_tc_vlans
 
-    execute_testcases.register(meraki_ms_tc_vlans)
+    execute_testcases.register(meraki_wireless_tc_vlans)

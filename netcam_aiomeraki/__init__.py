@@ -29,9 +29,9 @@ from netcad.device import Device
 # Private Imports
 # -----------------------------------------------------------------------------
 
-from .meraki_appliance_dut import MerakiMXDeviceUnderTest
-from .merkai_switch_dut import MerakiMSDeviceUnderTest
-from .meraki_wireless import MerakiWirelessDeviceUnderTest
+from .appliance import MerakiApplianceDeviceUnderTest
+from .switch import MerakiSwitchDeviceUnderTest
+from .wireless import MerakiWirelessDeviceUnderTest
 
 
 # -----------------------------------------------------------------------------
@@ -49,8 +49,8 @@ __all__ = ["__version__", "get_dut"]
 __version__ = importlib_metadata.version(__name__)
 
 dut_by_product = {
-    "MX": MerakiMXDeviceUnderTest,
-    "MS": MerakiMSDeviceUnderTest,
+    "MX": MerakiApplianceDeviceUnderTest,
+    "MS": MerakiSwitchDeviceUnderTest,
     "MR": MerakiWirelessDeviceUnderTest,
 }
 
