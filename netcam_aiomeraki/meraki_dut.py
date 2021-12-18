@@ -295,7 +295,10 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
 
         # set the DUT attribute to indicate if the device is reachable.
 
-        self.meraki_device_reachable = (p_st := ping_check["status"]) == "complete"
+        self.meraki_device_reachable = (p_st := ping_check["status"]) in (
+            "complete",
+            "ready",
+        )
         if not self.meraki_device_reachable:
             log.error(f"DUT: {self.device.name}: Ping check failed, status: {p_st}")
 
