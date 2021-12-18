@@ -38,7 +38,7 @@ from netcad.netcam import any_failures, tc_result_types as trt
 # -----------------------------------------------------------------------------
 
 if TYPE_CHECKING:
-    from .meraki_appliance_dut import MerakiApplianceDeviceUnderTest
+    from .meraki_wireless_dut import MerakiWirelessDeviceUnderTest
 
 
 # -----------------------------------------------------------------------------
@@ -58,7 +58,7 @@ async def meraki_device_tc_cabling(
     self, testcases: InterfaceCablingTestCases
 ) -> Optional[trt.CollectionTestResults]:
 
-    dut: MerakiApplianceDeviceUnderTest = self
+    dut: MerakiWirelessDeviceUnderTest = self
     device = dut.device
     results = list()
 
@@ -72,9 +72,7 @@ async def meraki_device_tc_cabling(
     # there are other interfaces such as "wan" that are not of interest (yet).
 
     map_msrd_port_nei = {
-        port_name[4:]: port_data
-        for port_name, port_data in api_data["ports"].items()
-        if port_name.startswith("port")
+        port_name: port_data for port_name, port_data in api_data["ports"].items()
     }
 
     for test_case in testcases.tests:
@@ -85,19 +83,19 @@ async def meraki_device_tc_cabling(
             continue
 
         results.extend(
-            test_one_interface(
-                device=device, test_case=test_case, measurement=msrd_ifnei
-            )
+            test_one_interface(dut=dut, test_case=test_case, measurement=msrd_ifnei)
         )
 
     return results
 
 
 def test_one_interface(
-    device, test_case: InterfaceCablingTestCase, measurement: dict
+    dut: "MerakiWirelessDeviceUnderTest",
+    test_case: InterfaceCablingTestCase,
+    measurement: dict,
 ) -> trt.CollectionTestResults:
     results = list()
-
+    device = dut.device
     expd_nei = test_case.expected_results
 
     # for now only checking the LLDP status; not checking CDP.
@@ -114,7 +112,9 @@ def test_one_interface(
     msrd_name = msrd_nei["systemName"]
     msrd_port_id = msrd_nei["portId"]
 
-    if not nei_hostname_match(expd_nei.device, msrd_name):
+    if not nei_hostname_match(
+        expd_nei.device, msrd_name
+    ) and not dut.meraki_hostname_match(expd_nei.device, msrd_name):
         results.append(
             trt.FailFieldMismatchResult(
                 device=device,

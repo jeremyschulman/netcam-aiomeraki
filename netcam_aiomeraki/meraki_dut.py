@@ -108,6 +108,13 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
     #
     # -------------------------------------------------------------------------
 
+    @staticmethod
+    def meraki_hostname_match(expected, measured: str):
+        if not measured.startswith("Meraki"):
+            return False
+
+        return expected == measured.split()[-1]
+
     async def api_cache_get(self, key: str, call: str, **kwargs):
         async with self._api_cache_lock:
             if not (has_data := self._api_cache.get(key)):
@@ -117,6 +124,24 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
                     self._api_cache[key] = has_data
 
             return has_data
+
+    # -------------------------------------------------------------------------
+    # Common Meraki Device API calls
+    # -------------------------------------------------------------------------
+
+    async def get_lldp_status(self):
+        return await self.api_cache_get(
+            key="lldp_status",
+            call="devices.getDeviceLldpCdp",
+            serial=self.serial,
+        )
+
+    async def get_mgmt_iface(self):
+        return await self.api_cache_get(
+            key="config_mgmt_iface",
+            call="devices.getDeviceManagementInterface",
+            serial=self.serial,
+        )
 
     async def get_inventory_device(
         self, single=True, **kwargs
@@ -269,7 +294,11 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
                 timeout -= 1
 
         # set the DUT attribute to indicate if the device is reachable.
-        self.meraki_device_reachable = ping_check["status"] == "complete"
+
+        self.meraki_device_reachable = (p_st := ping_check["status"]) == "complete"
+        if not self.meraki_device_reachable:
+            log.error(f"DUT: {self.device.name}: Ping check failed, status: {p_st}")
+
         return ping_check
 
     # -------------------------------------------------------------------------
