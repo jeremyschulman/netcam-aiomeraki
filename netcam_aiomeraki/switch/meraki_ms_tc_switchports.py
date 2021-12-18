@@ -52,7 +52,7 @@ from netcad.vlan.tc_switchports import (
 # -----------------------------------------------------------------------------
 
 if TYPE_CHECKING:
-    from .meraki_ms_dut import MerakiMSDeviceUnderTest
+    from .meraki_ms_dut import MerakiSwitchDeviceUnderTest
 
 from netcam_aiomeraki.tc_helpers import add_pass_if_nofail
 from netcad.helpers import range_string
@@ -74,7 +74,7 @@ async def meraki_ms_tc_switchports(
     self, testcases: SwitchportTestCases
 ) -> tr.CollectionTestResults:
 
-    dut: MerakiMSDeviceUnderTest = self
+    dut: MerakiSwitchDeviceUnderTest = self
     device = dut.device
     ports_config = await dut.get_port_config()
     map_ports_config = {rec["portId"]: rec for rec in ports_config}

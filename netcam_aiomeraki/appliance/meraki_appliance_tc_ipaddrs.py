@@ -37,7 +37,7 @@ from netcad.netcam import any_failures, tc_result_types as trt
 # -----------------------------------------------------------------------------
 
 if TYPE_CHECKING:
-    from .meraki_appliance_dut import MerakiMXDeviceUnderTest
+    from .meraki_appliance_dut import MerakiApplianceDeviceUnderTest
 
 
 # -----------------------------------------------------------------------------
@@ -58,7 +58,7 @@ async def meraki_mx_tc_ipaddrs(
     self, testcases: IPInterfacesTestCases
 ) -> trt.CollectionTestResults:
 
-    dut: MerakiMXDeviceUnderTest = self
+    dut: MerakiApplianceDeviceUnderTest = self
     device = dut.device
 
     # The IP addresses to check come from the VLAN/Address configuration

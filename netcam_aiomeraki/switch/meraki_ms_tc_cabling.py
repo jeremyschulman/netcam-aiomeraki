@@ -40,7 +40,7 @@ from netcad.netcam import any_failures, tc_result_types as trt
 # -----------------------------------------------------------------------------
 
 if TYPE_CHECKING:
-    from .meraki_ms_dut import MerakiMSDeviceUnderTest
+    from .meraki_ms_dut import MerakiSwitchDeviceUnderTest
 
 
 # -----------------------------------------------------------------------------
@@ -60,7 +60,7 @@ async def meraki_ms_tc_cabling(
     self, testcases: InterfaceCablingTestCases
 ) -> trt.CollectionTestResults:
 
-    dut: MerakiMSDeviceUnderTest = self
+    dut: MerakiSwitchDeviceUnderTest = self
     device = dut.device
 
     api_data = await dut.get_port_status()
@@ -110,7 +110,7 @@ async def meraki_ms_tc_cabling(
 
 
 async def _test_one_cdp_interface(
-    dut: "MerakiMSDeviceUnderTest",
+    dut: "MerakiSwitchDeviceUnderTest",
     test_case: InterfaceCablingTestCase,
     msrd_cdp_nei: dict,
 ) -> trt.CollectionTestResults:

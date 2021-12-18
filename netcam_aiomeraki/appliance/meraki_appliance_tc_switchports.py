@@ -36,7 +36,7 @@ from netcad.vlan.tc_switchports import (
 # -----------------------------------------------------------------------------
 
 if TYPE_CHECKING:
-    from .meraki_appliance_dut import MerakiMXDeviceUnderTest
+    from .meraki_appliance_dut import MerakiApplianceDeviceUnderTest
 
 
 # -----------------------------------------------------------------------------
@@ -56,7 +56,7 @@ async def meraki_mx_tc_switchports(
     self, testcases: SwitchportTestCases
 ) -> tr.CollectionTestResults:
 
-    dut: MerakiMXDeviceUnderTest = self
+    dut: MerakiApplianceDeviceUnderTest = self
     device = dut.device
 
     # The MX port data stores the port number as an int; need to convert to str

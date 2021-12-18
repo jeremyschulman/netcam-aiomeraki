@@ -34,7 +34,7 @@ from netcad.topology.tc_interfaces import (
 # -----------------------------------------------------------------------------
 
 if TYPE_CHECKING:
-    from .meraki_appliance_dut import MerakiMXDeviceUnderTest
+    from .meraki_appliance_dut import MerakiApplianceDeviceUnderTest
 
 # -----------------------------------------------------------------------------
 # Exports
@@ -53,7 +53,7 @@ async def meraki_appliance_tc_interfaces(
     dut, testcases: InterfaceTestCases
 ) -> Optional[tr.CollectionTestResults]:
 
-    dut: MerakiMXDeviceUnderTest
+    dut: MerakiApplianceDeviceUnderTest
     device = dut.device
 
     api_data = await dut.get_switchports()

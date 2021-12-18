@@ -45,7 +45,7 @@ from netcam_aiomeraki.meraki_dut import (
 # Exports
 # -----------------------------------------------------------------------------
 
-__all__ = ["MerakiMXDeviceUnderTest"]
+__all__ = ["MerakiApplianceDeviceUnderTest"]
 
 # -----------------------------------------------------------------------------
 #
@@ -54,7 +54,7 @@ __all__ = ["MerakiMXDeviceUnderTest"]
 # -----------------------------------------------------------------------------
 
 
-class MerakiMXDeviceUnderTest(MerakiDeviceUnderTest):
+class MerakiApplianceDeviceUnderTest(MerakiDeviceUnderTest):
 
     # -------------------------------------------------------------------------
     #

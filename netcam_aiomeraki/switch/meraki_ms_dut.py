@@ -30,7 +30,7 @@ from netcam_aiomeraki.meraki_dut import (
 )
 
 
-class MerakiMSDeviceUnderTest(MerakiDeviceUnderTest):
+class MerakiSwitchDeviceUnderTest(MerakiDeviceUnderTest):
     async def get_port_config(self):
         return await self.api_cache_get(
             key="ports_config",
