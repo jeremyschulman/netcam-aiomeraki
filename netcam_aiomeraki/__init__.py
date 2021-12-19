@@ -16,6 +16,7 @@
 # System Imports
 # -----------------------------------------------------------------------------
 
+from typing import Optional
 import importlib.metadata as importlib_metadata
 from pathlib import Path
 
@@ -24,11 +25,13 @@ from pathlib import Path
 # -----------------------------------------------------------------------------
 
 from netcad.device import Device
+from netcad.netcam.dut import AsyncDeviceUnderTest
 
 # -----------------------------------------------------------------------------
 # Private Imports
 # -----------------------------------------------------------------------------
 
+from .meraki_dut import MerakiDeviceUnderTest
 from .appliance import MerakiApplianceDeviceUnderTest
 from .switch import MerakiSwitchDeviceUnderTest
 from .wireless import MerakiWirelessDeviceUnderTest
@@ -55,8 +58,26 @@ dut_by_product = {
 }
 
 
-def get_dut(device: Device, testcases_dir: Path):
+def get_dut(device: Device, testcases_dir: Path) -> Optional[AsyncDeviceUnderTest]:
+    """
+    This is the netcam plugin required "hook" function.  This function is
+    required to examine the device instance and return back a Device Under Test
+    (DUT) instance; or None if the device is not supported by this plugin.
 
+    Parameters
+    ----------
+    device:
+        The device instance for which a DUT is required.
+
+    testcases_dir: Path
+        The filepath location where the testcases for this device should be
+        found.
+
+    Returns
+    -------
+    None when the device product_model is not supported by this plugin
+    DUT instance otherwise.
+    """
     if device.os_name != "meraki":
         raise RuntimeError(
             f"Missing required DUT class for device {device.name}, os_name: {device.os_name}"
