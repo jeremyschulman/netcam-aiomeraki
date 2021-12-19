@@ -131,9 +131,9 @@ class MerakiApplianceDeviceUnderTest(MerakiDeviceUnderTest):
     # Support the 'ipaddrs' testcases
     # -------------------------------------------------------------------------
 
-    from .meraki_appliance_tc_ipaddrs import meraki_mx_tc_ipaddrs
+    from .meraki_appliance_tc_ipaddrs import meraki_appliance_tc_ipaddrs
 
-    execute_testcases.register(meraki_mx_tc_ipaddrs)
+    execute_testcases.register(meraki_appliance_tc_ipaddrs)
 
     # -------------------------------------------------------------------------
     # Support the 'switchports' testcases

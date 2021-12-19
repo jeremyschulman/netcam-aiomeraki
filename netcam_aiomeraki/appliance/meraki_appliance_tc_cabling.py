@@ -57,7 +57,10 @@ __all__ = ["meraki_device_tc_cabling"]
 async def meraki_device_tc_cabling(
     self, testcases: InterfaceCablingTestCases
 ) -> Optional[trt.CollectionTestResults]:
-
+    """
+    Validate the device cabling, as reported via LLDP/CDP against the design
+    topology cabling information.
+    """
     dut: MerakiApplianceDeviceUnderTest = self
     device = dut.device
     results = list()
@@ -96,6 +99,9 @@ async def meraki_device_tc_cabling(
 def test_one_interface(
     device, test_case: InterfaceCablingTestCase, measurement: dict
 ) -> trt.CollectionTestResults:
+    """
+    Validate one interface cabling inforomation against the design expectations.
+    """
     results = list()
 
     expd_nei = test_case.expected_results

@@ -44,7 +44,7 @@ if TYPE_CHECKING:
 # Exports
 # -----------------------------------------------------------------------------
 
-__all__ = ["meraki_mx_tc_ipaddrs"]
+__all__ = ["meraki_appliance_tc_ipaddrs"]
 
 
 # -----------------------------------------------------------------------------
@@ -54,10 +54,12 @@ __all__ = ["meraki_mx_tc_ipaddrs"]
 # -----------------------------------------------------------------------------
 
 
-async def meraki_mx_tc_ipaddrs(
+async def meraki_appliance_tc_ipaddrs(
     self, testcases: IPInterfacesTestCases
 ) -> trt.CollectionTestResults:
-
+    """
+    Validate the device usage of IP addresses against the design expectations.
+    """
     dut: MerakiApplianceDeviceUnderTest = self
     device = dut.device
 
@@ -115,7 +117,9 @@ async def _test_one_interface(
     test_case: IPInterfaceTestCase,
     msrd_data: dict,
 ) -> trt.CollectionTestResults:
-
+    """
+    Validate one interface IP address usage against the design expectations.
+    """
     results = list()
 
     msrd_if_addr = msrd_data["applianceIp"]
@@ -149,7 +153,10 @@ async def _test_one_interface(
 def _test_exclusive_list(
     device: Device, expd_if_names: Sequence[str], msrd_if_names: List[str]
 ) -> trt.CollectionTestResults:
-
+    """
+    Validate the exclusive list of IP addresses used by the device against the
+    design expectations.
+    """
     # the previous per-interface checks for any missing; therefore we only need
     # to check for any extra interfaces found on the device.
 

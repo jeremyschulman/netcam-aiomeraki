@@ -55,7 +55,9 @@ __all__ = ["meraki_appliance_tc_switchports"]
 async def meraki_appliance_tc_switchports(
     self, testcases: SwitchportTestCases
 ) -> tr.CollectionTestResults:
-
+    """
+    Validate the device VLAN to interface usage against the design expectations.
+    """
     dut: MerakiApplianceDeviceUnderTest = self
     device = dut.device
 
@@ -142,7 +144,9 @@ def _check_access_switchport(
 def _check_trunk_switchport(
     dut, test_case, expd_status: SwitchportTrunkExpectation, msrd_status: dict
 ) -> tr.CollectionTestResults:
-
+    """
+    Validate the state of one TRUNK port against the design expectations.
+    """
     device = dut.device
     results = list()
 

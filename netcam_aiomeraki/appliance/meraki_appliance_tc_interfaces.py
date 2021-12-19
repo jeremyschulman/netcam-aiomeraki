@@ -52,7 +52,10 @@ __all__ = ["meraki_appliance_tc_interfaces"]
 async def meraki_appliance_tc_interfaces(
     dut, testcases: InterfaceTestCases
 ) -> Optional[tr.CollectionTestResults]:
-
+    """
+    Validate the device interface config and status against the design
+    expectations.
+    """
     dut: MerakiApplianceDeviceUnderTest
     device = dut.device
 

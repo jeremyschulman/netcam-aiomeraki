@@ -46,6 +46,9 @@ __all__ = ["meraki_mx_tc_vlans"]
 async def meraki_mx_tc_vlans(
     self, testcases: VlanTestCases
 ) -> trt.CollectionTestResults:
+    """
+    Validate the device use of VLANs against the design expectations.
+    """
     dut: MerakiApplianceDeviceUnderTest = self
     device = dut.device
     results = list()
@@ -77,10 +80,20 @@ async def meraki_mx_tc_vlans(
 
 
 def _correlate_vlans_to_ports(port_configs: List, expd_vlan_ids: List) -> Dict:
+    """
+    The API does not provide a means to correlate the interfaces to VLANs as one
+    would find in other swtich products.  This function computes that mapping
+    based on the port configuration.
+    """
 
     map_vlans_to_interfaces = defaultdict(set)
 
     def is_unused_port(_data):
+        """
+        Represent whether or not a port is "used" by the device by examing the
+        state of the port.  If the port is disabled and in trunk mode and
+        dropped traffic set to True, then we declare that port "unused".
+        """
         return (
             _data["enabled"] is False
             and _data["type"] == "trunk"
@@ -133,7 +146,10 @@ def _correlate_vlans_to_ports(port_configs: List, expd_vlan_ids: List) -> Dict:
 
 
 def _test_exclusive_list(device, expected, measured) -> trt.CollectionTestResults:
-
+    """
+    Validate the exclusive list of VLANs used by the device against the design
+    expectation.
+    """
     results = list()
 
     s_expd = set(expected)
@@ -174,6 +190,9 @@ def _test_exclusive_list(device, expected, measured) -> trt.CollectionTestResult
 def _test_one_vlan(
     device: Device, test_case: VlanTestCase, vlans_to_intfs: dict
 ) -> trt.CollectionTestResults:
+    """
+    Test one VLAN use of related interfaces against the design expectations.
+    """
 
     results = list()
 
