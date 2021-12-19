@@ -33,7 +33,7 @@ from netcad.helpers import parse_istrange
 # -----------------------------------------------------------------------------
 
 if TYPE_CHECKING:
-    from .meraki_ms_dut import MerakiSwitchDeviceUnderTest
+    from .meraki_switch_dut import MerakiSwitchDeviceUnderTest
 
 
 # -----------------------------------------------------------------------------

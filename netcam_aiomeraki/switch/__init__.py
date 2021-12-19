@@ -12,4 +12,4 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from .meraki_ms_dut import MerakiSwitchDeviceUnderTest
+from .meraki_switch_dut import MerakiSwitchDeviceUnderTest

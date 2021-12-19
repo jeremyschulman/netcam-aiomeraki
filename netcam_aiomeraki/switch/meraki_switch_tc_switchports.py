@@ -52,9 +52,8 @@ from netcad.vlan.tc_switchports import (
 # -----------------------------------------------------------------------------
 
 if TYPE_CHECKING:
-    from .meraki_ms_dut import MerakiSwitchDeviceUnderTest
+    from .meraki_switch_dut import MerakiSwitchDeviceUnderTest
 
-from netcam_aiomeraki.tc_helpers import add_pass_if_nofail
 from netcad.helpers import range_string
 
 # -----------------------------------------------------------------------------
@@ -115,14 +114,14 @@ async def meraki_ms_tc_switchports(
             "trunk": _check_trunk_switchport,
         }.get(expd_mode)
 
-        results.extend(
-            add_pass_if_nofail(
-                device,
-                test_case,
-                measurement=msrd_port,
-                results=mode_handler(dut, test_case, expd_status, msrd_port),
-            )
-        )
+        results.extend(mode_handler(dut, test_case, expd_status, msrd_port))
+        #     add_pass_if_nofail(
+        #         device,
+        #         test_case,
+        #         measurement=msrd_port,
+        #         results=,
+        #     )
+        # )
 
     return results
 
@@ -177,9 +176,23 @@ def _check_trunk_switchport(
 
     msrd_allowd_vlans = msrd_status["allowedVlans"]
 
-    # if all, then done checking; really should not be using "all", so
-    # TODO: add INFO report that all is being used.
-    if msrd_allowd_vlans != "all":
+    # if all, then done checking; really should not be using "all", so log an info.
+
+    if msrd_allowd_vlans == "all":
+        if not results:
+            results.append(
+                tr.PassTestCase(
+                    device=device, test_case=test_case, measurement=msrd_status
+                )
+            )
+
+        results.append(
+            tr.InfoTestCase(
+                device=device,
+                test_case=test_case,
+                measurement="trunk port allows 'all' vlans",
+            )
+        )
         return results
 
     e_tr_allowed_vids = sorted(
@@ -200,5 +213,10 @@ def _check_trunk_switchport(
                 measurement=msrd_allowd_vlans,
             )
         )
+
+    if not results:
+        results = [
+            tr.PassTestCase(device=device, test_case=test_case, measurement=msrd_status)
+        ]
 
     return results

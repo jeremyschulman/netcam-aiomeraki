@@ -67,7 +67,7 @@ class MerakiSwitchDeviceUnderTest(MerakiDeviceUnderTest):
     # Support the 'cabling' testcases
     # -------------------------------------------------------------------------
 
-    from .meraki_ms_tc_cabling import meraki_ms_tc_cabling
+    from .meraki_switch_tc_cabling import meraki_ms_tc_cabling
 
     execute_testcases.register(meraki_ms_tc_cabling)
 
@@ -75,7 +75,7 @@ class MerakiSwitchDeviceUnderTest(MerakiDeviceUnderTest):
     # Support the 'interfaces' testcases
     # -------------------------------------------------------------------------
 
-    from .meraki_ms_tc_interfaces import meraki_switch_tc_interfaces
+    from .meraki_switch_tc_interfaces import meraki_switch_tc_interfaces
 
     execute_testcases.register(meraki_switch_tc_interfaces)
 
@@ -83,7 +83,7 @@ class MerakiSwitchDeviceUnderTest(MerakiDeviceUnderTest):
     # Support the 'switchports' testcases
     # -------------------------------------------------------------------------
 
-    from .meraki_ms_tc_switchports import meraki_ms_tc_switchports
+    from .meraki_switch_tc_switchports import meraki_ms_tc_switchports
 
     execute_testcases.register(meraki_ms_tc_switchports)
 
@@ -91,6 +91,6 @@ class MerakiSwitchDeviceUnderTest(MerakiDeviceUnderTest):
     # Support the 'vlans' testcases
     # -------------------------------------------------------------------------
 
-    from .meraki_ms_tc_vlans import meraki_ms_tc_vlans
+    from .meraki_switch_tc_vlans import meraki_ms_tc_vlans
 
     execute_testcases.register(meraki_ms_tc_vlans)

@@ -40,7 +40,7 @@ from netcad.netcam import any_failures, tc_result_types as trt
 # -----------------------------------------------------------------------------
 
 if TYPE_CHECKING:
-    from .meraki_ms_dut import MerakiSwitchDeviceUnderTest
+    from .meraki_switch_dut import MerakiSwitchDeviceUnderTest
 
 
 # -----------------------------------------------------------------------------

@@ -48,7 +48,22 @@ __all__ = ["meraki_tc_device_info"]
 async def meraki_tc_device_info(
     self, testcases: DeviceInformationTestCases
 ) -> trt.CollectionTestResults:
+    """
+    The testcase execute for the "device" testcase.  This function is used to
+    validate the expected product model.
 
+    Parameters
+    ----------
+    self: MerakiDeviceUnderTest
+        The DUT instance
+
+    testcases:
+        The DeviceInformation set of testcases.
+
+    Returns
+    -------
+    List of test-case results that are processed by the netcam infrastructure.
+    """
     dut: MerakiDeviceUnderTest = self
     device = dut.device
 
@@ -71,10 +86,24 @@ async def meraki_tc_device_info(
             )
         )
 
+    # add an information result to capture the state of the device data.
+
+    results.append(
+        trt.InfoTestCase(
+            device=device,
+            test_case=testcase,
+            field="device_info",
+            measurement=self.meraki_device,
+        )
+    )
+
     if not any_failures(results):
         results.append(
             trt.PassTestCase(
-                device=device, test_case=testcase, measurement=exp_values.dict()
+                device=device,
+                test_case=testcase,
+                field="product_model",
+                measurement=msrd_product_model,
             )
         )
 
