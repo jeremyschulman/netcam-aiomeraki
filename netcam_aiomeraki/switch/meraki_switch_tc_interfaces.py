@@ -54,7 +54,10 @@ __all__ = ["meraki_switch_tc_interfaces"]
 async def meraki_switch_tc_interfaces(
     dut, testcases: InterfaceTestCases
 ) -> Optional[tr.CollectionTestResults]:
-
+    """
+    Validate the device interface configuration and status against the design
+    expectations.
+    """
     device = dut.device
 
     status_list = await dut.get_port_status()
@@ -100,11 +103,17 @@ async def meraki_switch_tc_interfaces(
 
 
 def meraki_to_speed(speed_str: str) -> int:
+    """
+    Convert the API returned speed value, represented as a string, into an int
+    value in the form used by the design.
+    """
+
     if not speed_str:
         return 0
 
     if speed_str == "1 Gbps":
         return PhyPortSpeeds.speed_1G
+
     elif speed_str == "100 Mbps":
         return PhyPortSpeeds.speed_100M
 
@@ -112,12 +121,18 @@ def meraki_to_speed(speed_str: str) -> int:
 
 
 class SwitchInterfaceMeasurement(BaseModel):
+    """
+    This class is used to normalize the Meraki API data into a form that makes
+    it esaier to compare against the design expectations.
+    """
+
     used: bool
     oper_up: bool
     speed: int
 
     @classmethod
     def from_api(cls, api_payload: dict):
+        """convert Meraki API paayload into object"""
         return cls(
             used=api_payload["enabled"] is True,
             oper_up=api_payload["status"] == "Connected",
@@ -130,6 +145,9 @@ def meraki_check_switch_one_interface(
     test_case: InterfaceTestCase,
     measurement: SwitchInterfaceMeasurement,
 ) -> tr.CollectionTestResults:
+    """
+    Validate the state of one interface agains the design expectations.
+    """
 
     if_flags = test_case.test_params.interface_flags or {}
     is_reserved = if_flags.get("is_reserved", False)

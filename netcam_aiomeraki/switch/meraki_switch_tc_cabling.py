@@ -59,7 +59,10 @@ __all__ = ["meraki_ms_tc_cabling"]
 async def meraki_ms_tc_cabling(
     self, testcases: InterfaceCablingTestCases
 ) -> trt.CollectionTestResults:
-
+    """
+    Validate the state of the switch LLDP/CDP neighbor information against the
+    expected cabling topology in the design.
+    """
     dut: MerakiSwitchDeviceUnderTest = self
     device = dut.device
 
@@ -79,7 +82,7 @@ async def meraki_ms_tc_cabling(
         if msrd_lldp_nei := msrd_nei_status.get("lldp"):
             results.extend(
                 _test_one_lldp_interface(
-                    device=device, test_case=test_case, msrd_lldp_nei=msrd_lldp_nei
+                    dut=dut, test_case=test_case, msrd_lldp_nei=msrd_lldp_nei
                 )
             )
         elif msrd_cdp_nei := msrd_nei_status.get("cdp"):
@@ -114,6 +117,15 @@ async def _test_one_cdp_interface(
     test_case: InterfaceCablingTestCase,
     msrd_cdp_nei: dict,
 ) -> trt.CollectionTestResults:
+    """
+    Validate a single interface if the only neighborship data available is CDP.
+    This should not be the case, as LLDP is expected everywhere; and this function
+    is not completed finished.
+
+    Raises
+    ------
+    NotImplementedError
+    """
 
     # results = list()
     device = dut.device
@@ -162,18 +174,23 @@ async def _test_one_cdp_interface(
     raise NotImplementedError("Meraki Switch CDP cabling check")
 
 
-def meraki_hostname_match(expected, measured: str):
-    if not measured.startswith("Meraki"):
-        return False
-
-    return expected == measured.split()[-1]
+# def meraki_hostname_match(expected, measured: str):
+#     if not measured.startswith("Meraki"):
+#         return False
+#
+#     return expected == measured.split()[-1]
 
 
 def _test_one_lldp_interface(
-    device, test_case: InterfaceCablingTestCase, msrd_lldp_nei: dict
+    dut: "MerakiSwitchDeviceUnderTest",
+    test_case: InterfaceCablingTestCase,
+    msrd_lldp_nei: dict,
 ) -> trt.CollectionTestResults:
+    """
+    Validate one interface cabling information using the reported LLDP data.
+    """
     results = list()
-
+    device = dut.device
     expd_nei = test_case.expected_results
 
     msrd_name = msrd_lldp_nei["systemName"]
@@ -181,9 +198,9 @@ def _test_one_lldp_interface(
 
     # ensure the expected hostname matches
 
-    if not nei_hostname_match(expd_nei.device, msrd_name) and not meraki_hostname_match(
+    if not nei_hostname_match(
         expd_nei.device, msrd_name
-    ):
+    ) and not dut.meraki_hostname_match(expd_nei.device, msrd_name):
         results.append(
             trt.FailFieldMismatchResult(
                 device=device,
