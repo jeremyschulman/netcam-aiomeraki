@@ -31,24 +31,28 @@ from netcam_aiomeraki.meraki_dut import (
 
 
 class MerakiSwitchDeviceUnderTest(MerakiDeviceUnderTest):
-    async def get_port_config(self):
+    """
+    Support the Meraki switch devices, product models that being with "MS".
+    """
+
+    async def get_port_config(self) -> dict:
+        """
+        Obtain the switch port configuration.  The API content is cached.
+        """
         return await self.api_cache_get(
             key="ports_config",
             call="switch.getDeviceSwitchPorts",
             serial=self.serial,
         )
 
-    async def get_port_status(self):
+    async def get_port_status(self) -> dict:
+        """
+        Obtain the switch port status information.  The API content is cached.
+        """
         return await self.api_cache_get(
             key="ports_status",
             call="switch.getDeviceSwitchPortsStatuses",
             serial=self.serial,
-        )
-
-    async def get_vlans(self):
-        return await self.api_cache_get(
-            key="vlans",
-            call="",
         )
 
     # -------------------------------------------------------------------------
@@ -61,6 +65,10 @@ class MerakiSwitchDeviceUnderTest(MerakiDeviceUnderTest):
     async def execute_testcases(
         self, testcases: TestCases
     ) -> Optional["CollectionTestResults"]:
+        """
+        If this DUT does not explicity implement a test-case, then try the
+        superclass.
+        """
         return await super().execute_testcases(testcases)
 
     # -------------------------------------------------------------------------
@@ -83,9 +91,9 @@ class MerakiSwitchDeviceUnderTest(MerakiDeviceUnderTest):
     # Support the 'switchports' testcases
     # -------------------------------------------------------------------------
 
-    from .meraki_switch_tc_switchports import meraki_ms_tc_switchports
+    from .meraki_switch_tc_switchports import meraki_switch_tc_switchports
 
-    execute_testcases.register(meraki_ms_tc_switchports)
+    execute_testcases.register(meraki_switch_tc_switchports)
 
     # -------------------------------------------------------------------------
     # Support the 'vlans' testcases

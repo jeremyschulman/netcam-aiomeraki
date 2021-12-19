@@ -60,7 +60,7 @@ from netcad.helpers import range_string
 # Exports
 # -----------------------------------------------------------------------------
 
-__all__ = ["meraki_ms_tc_switchports"]
+__all__ = ["meraki_switch_tc_switchports"]
 
 # -----------------------------------------------------------------------------
 #
@@ -69,10 +69,13 @@ __all__ = ["meraki_ms_tc_switchports"]
 # -----------------------------------------------------------------------------
 
 
-async def meraki_ms_tc_switchports(
+async def meraki_switch_tc_switchports(
     self, testcases: SwitchportTestCases
 ) -> tr.CollectionTestResults:
-
+    """
+    Validate the device switchport configuration against the design
+    expectations.
+    """
     dut: MerakiSwitchDeviceUnderTest = self
     device = dut.device
     ports_config = await dut.get_port_config()
@@ -115,13 +118,6 @@ async def meraki_ms_tc_switchports(
         }.get(expd_mode)
 
         results.extend(mode_handler(dut, test_case, expd_status, msrd_port))
-        #     add_pass_if_nofail(
-        #         device,
-        #         test_case,
-        #         measurement=msrd_port,
-        #         results=,
-        #     )
-        # )
 
     return results
 
@@ -154,7 +150,9 @@ def _check_access_switchport(
 def _check_trunk_switchport(
     dut, test_case, expd_status: SwitchportTrunkExpectation, msrd_status: dict
 ) -> tr.CollectionTestResults:
-
+    """
+    Check one interface that is a TRUNK port.
+    """
     device = dut.device
     results = list()
 
