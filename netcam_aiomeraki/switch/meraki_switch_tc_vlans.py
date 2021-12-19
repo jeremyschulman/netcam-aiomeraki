@@ -40,12 +40,15 @@ if TYPE_CHECKING:
 # Exports
 # -----------------------------------------------------------------------------
 
-__all__ = ["meraki_ms_tc_vlans"]
+__all__ = ["meraki_switch_tc_vlans"]
 
 
-async def meraki_ms_tc_vlans(
+async def meraki_switch_tc_vlans(
     self, testcases: VlanTestCases
 ) -> trt.CollectionTestResults:
+    """
+    Validate the switch set of used VLANs against those defined in the design.
+    """
     dut: MerakiSwitchDeviceUnderTest = self
     device = dut.device
     results = list()
@@ -77,7 +80,26 @@ async def meraki_ms_tc_vlans(
 def _correlate_vlans_to_ports(
     port_configs: List, expd_vlan_ids: List
 ) -> Tuple[Set, Dict]:
+    """
+    The switch API does not have a route that gives the interface to VLAN mapping directly,
+    so this function is used to build that correlation.
 
+    Parameters
+    ----------
+    port_configs: list[dict]
+        The list of port config objects as returned from the Merak API
+
+    expd_vlan_ids:
+        The List of VLANs as defined in the design.
+
+    Returns
+    -------
+    Tuple:
+        Set of all VLAN-IDs used by the device
+        Dict: maaping of VLANs to interfaces using each Vlan.
+            key=vlan-id,
+            value=set of interfaec names usiing that vlan
+    """
     map_vlans_to_interfaces = defaultdict(set)
     all_device_vlans = set()
 
@@ -217,7 +239,10 @@ def _test_exclusive_list(
 def _test_one_vlan(
     device: Device, test_case: VlanTestCase, vlans_to_intfs: dict
 ) -> trt.CollectionTestResults:
-
+    """
+    Check the device configuration for a specific VLAN->interfaces usage against
+    the expected interfaces in the design.
+    """
     results = list()
 
     # The test case ID is the VLAN ID in string form, we will want it as

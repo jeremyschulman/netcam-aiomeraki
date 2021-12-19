@@ -91,6 +91,6 @@ class MerakiSwitchDeviceUnderTest(MerakiDeviceUnderTest):
     # Support the 'vlans' testcases
     # -------------------------------------------------------------------------
 
-    from .meraki_switch_tc_vlans import meraki_ms_tc_vlans
+    from .meraki_switch_tc_vlans import meraki_switch_tc_vlans
 
-    execute_testcases.register(meraki_ms_tc_vlans)
+    execute_testcases.register(meraki_switch_tc_vlans)
