@@ -15,6 +15,7 @@
 # -----------------------------------------------------------------------------
 # System Imports
 # -----------------------------------------------------------------------------
+
 import asyncio
 from typing import TYPE_CHECKING
 
@@ -157,6 +158,10 @@ def _check_access_switchport(
 def _check_trunk_switchport(
     dut, test_case, expd_status: SwitchportTrunkExpectation, msrd_status: set
 ) -> tr.CollectionTestResults:
+    """
+    Validate the wireless device is configured as defined relative to the
+    VLANs used and the configuraiton of the wired0 port.
+    """
 
     device = dut.device
     results = list()
@@ -165,10 +170,6 @@ def _check_trunk_switchport(
 
     # TODO: need to determine if/how to validate the native-vlan setting.  Need
     #       to find this in the API.
-
-    # need to process the vlan list. Meraki provides this as a CSV we need to
-    # create a CSV from the expected vlans. Then convert the list of vlan-ids to
-    # a range string for string comparison purposes.
 
     expd_set = {vlan.vlan_id for vlan in expd_status.trunk_allowed_vlans}
 

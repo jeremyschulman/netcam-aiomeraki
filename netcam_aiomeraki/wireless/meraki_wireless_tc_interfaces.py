@@ -52,7 +52,9 @@ __all__ = ["meraki_wireless_tc_interfaces"]
 async def meraki_wireless_tc_interfaces(
     dut, testcases: InterfaceTestCases
 ) -> Optional[tr.CollectionTestResults]:
-
+    """
+    Validate the wireless device interfaces against the design.
+    """
     dut: MerakiWirelessDeviceUnderTest
     device = dut.device
 
@@ -61,7 +63,11 @@ async def meraki_wireless_tc_interfaces(
 
     api_data = await dut.get_lldp_status()
 
-    def nei_data_exists(_on_port):
+    def nei_data_exists(_on_port) -> bool:
+        """
+        Returns True if the interface is reporting any neighbor device either
+        via LLDP or CDP.
+        """
         return bool(
             _on_port.get("lldp", {}).get("systemName")
             or _on_port.get("cdp", {}).get("deviceId")

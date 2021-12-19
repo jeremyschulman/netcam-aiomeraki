@@ -70,7 +70,10 @@ __all__ = ["meraki_wireless_tc_ipaddrs"]
 async def meraki_wireless_tc_ipaddrs(
     self, testcases: IPInterfacesTestCases
 ) -> trt.CollectionTestResults:
-
+    """
+    Validate the wireless device configured IP addresses against those defined
+    in the design.
+    """
     dut: MerakiWirelessDeviceUnderTest = self
     device = dut.device
 
@@ -85,6 +88,10 @@ async def meraki_wireless_tc_ipaddrs(
     # TODO: Note this in the documentation.
 
     def _static_ip(_port_data: dict):
+        """
+        extract the static IP configuration from the API payload and return the
+        IP interface as a string with prefixlen nation.
+        """
         ifip_str = f"{_port_data['staticIp']}/{_port_data['staticSubnetMask']}"
         return str(IPv4Interface(ifip_str).with_prefixlen)
 
@@ -135,6 +142,10 @@ async def _test_one_interface(
     test_case: IPInterfaceTestCase,
     msrd_if_ipaddr: str,
 ) -> trt.CollectionTestResults:
+    """
+    Validate one interface on the device against the test case defining the designed
+    IP address.
+    """
 
     results = list()
 
@@ -167,9 +178,10 @@ async def _test_one_interface(
 def _test_exclusive_list(
     device: Device, expd_if_names: Sequence[str], msrd_if_names: List[str]
 ) -> trt.CollectionTestResults:
-
-    # the previous per-interface checks for any missing; therefore we only need
-    # to check for any extra interfaces found on the device.
+    """
+    The previous per-interface checks for any missing; therefore we only need
+    to check for any extra interfaces found on the device.
+    """
 
     tc = IPInterfaceExclusiveListTestCase()
 

@@ -37,6 +37,10 @@ __all__ = ["MerakiWirelessDeviceUnderTest"]
 
 
 class MerakiWirelessDeviceUnderTest(MerakiDeviceUnderTest):
+    """
+    Support the Meraki wireless devices, product modules that are "MR".
+    """
+
     async def get_ssids(self):
         """
         The SSIDs configuration contains the specific vlans that are in use.

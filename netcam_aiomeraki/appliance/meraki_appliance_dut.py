@@ -65,7 +65,7 @@ class MerakiApplianceDeviceUnderTest(MerakiDeviceUnderTest):
     #
     # -------------------------------------------------------------------------
 
-    # async def get_lldp_status(self):
+    # async def get_lldp_stqqatus(self):
     #     return await self.api_cache_get(
     #         key="lldp_status",
     #         call="devices.getDeviceLldpCdp",

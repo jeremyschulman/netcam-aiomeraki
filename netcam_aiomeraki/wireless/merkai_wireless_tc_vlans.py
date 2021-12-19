@@ -81,7 +81,10 @@ async def meraki_wireless_tc_vlans(
 
 
 def _test_exclusive_list(device, expected, measured) -> trt.CollectionTestResults:
-
+    """
+    Validate the wireless device is configured with the exclusive list of VLANs
+    as defined in the design.
+    """
     results = list()
 
     tc = VlanTestCaseExclusiveList()
