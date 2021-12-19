@@ -55,6 +55,9 @@ __all__ = ["MerakiApplianceDeviceUnderTest"]
 
 
 class MerakiApplianceDeviceUnderTest(MerakiDeviceUnderTest):
+    """
+    Meraki DUT sub-class for "appliance" devices such as the MX product line.
+    """
 
     # -------------------------------------------------------------------------
     #
@@ -62,14 +65,15 @@ class MerakiApplianceDeviceUnderTest(MerakiDeviceUnderTest):
     #
     # -------------------------------------------------------------------------
 
-    async def get_lldp_status(self):
-        return await self.api_cache_get(
-            key="lldp_status",
-            call="devices.getDeviceLldpCdp",
-            serial=self.serial,
-        )
+    # async def get_lldp_status(self):
+    #     return await self.api_cache_get(
+    #         key="lldp_status",
+    #         call="devices.getDeviceLldpCdp",
+    #         serial=self.serial,
+    #     )
 
     async def get_switchports(self):
+        """Get the appliance switchport configuration"""
         return await self.api_cache_get(
             key="switchports",
             call="appliance.getNetworkAppliancePorts",
@@ -77,6 +81,7 @@ class MerakiApplianceDeviceUnderTest(MerakiDeviceUnderTest):
         )
 
     async def get_vlans(self):
+        """Get the appliance vlan configuraiton"""
         return await self.api_cache_get(
             key="vlans",
             call="appliance.getNetworkApplianceVlans",
@@ -93,6 +98,11 @@ class MerakiApplianceDeviceUnderTest(MerakiDeviceUnderTest):
     async def execute_testcases(
         self, testcases: TestCases
     ) -> Optional["CollectionTestResults"]:
+        """
+        Dispatch hook for testcase executor registration in this sub-class. If
+        this method is reached it means that this DUT does not implement the
+        specific testcases and the super-class is tried.
+        """
         return await super().execute_testcases(testcases)
 
     # -------------------------------------------------------------------------
