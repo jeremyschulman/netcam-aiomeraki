@@ -44,7 +44,7 @@ if TYPE_CHECKING:
 # Exports
 # -----------------------------------------------------------------------------
 
-__all__ = ["meraki_wireless_tc_switchports"]
+__all__ = ["meraki_wireless_check_switchports"]
 
 # -----------------------------------------------------------------------------
 #
@@ -53,8 +53,8 @@ __all__ = ["meraki_wireless_tc_switchports"]
 # -----------------------------------------------------------------------------
 
 
-async def meraki_wireless_tc_switchports(
-    self, testcases: SwitchportCheckCollection
+async def meraki_wireless_check_switchports(
+    self, check_collection: SwitchportCheckCollection
 ) -> tr.CheckResultsCollection:
     """
     The Meraki APs are not technically "switches", but the construct of switchports and
@@ -99,16 +99,16 @@ async def meraki_wireless_tc_switchports(
     # about the behavior of the AP.
 
     results = list()
-    for test_case in testcases.checks:
-        expd_status = test_case.expected_results
+    for check in check_collection.checks:
+        expd_status = check.expected_results
 
-        if_name = test_case.check_id()
+        if_name = check.check_id()
 
         # if the interface from the design does not exist on the device, then
         # report this error and go to next test-case.
 
         if not (msrd_port := map_msrd_status.get(if_name)):
-            results.append(tr.CheckFailNoExists(device=device, check=test_case))
+            results.append(tr.CheckFailNoExists(device=device, check=check))
             continue
 
         # check the switchport mode value.  If they do not match, then we report
@@ -118,21 +118,19 @@ async def meraki_wireless_tc_switchports(
         #       vs. access mode (if there is one).  For now we will skip the
         #       switchport.mode check.
 
-        mode_results = _check_trunk_switchport(dut, test_case, expd_status, msrd_port)
+        mode_results = _check_trunk_switchport(dut, check, expd_status, msrd_port)
         results.extend(mode_results)
 
         if not any_failures(mode_results):
             results.append(
-                tr.CheckPassResult(
-                    device=device, check=test_case, measurement=msrd_port
-                )
+                tr.CheckPassResult(device=device, check=check, measurement=msrd_port)
             )
 
     return results
 
 
 def _check_access_switchport(
-    dut, test_case, expd_status: SwitchportAccessExpectation, msrd_status: dict
+    dut, check, expd_status: SwitchportAccessExpectation, msrd_status: dict
 ) -> tr.CheckResultsCollection:
     """
     Only one check for now, that is to validate that the configured VLAN on the
@@ -146,7 +144,7 @@ def _check_access_switchport(
         results.append(
             tr.CheckFailFieldMismatch(
                 device=device,
-                check=test_case,
+                check=check,
                 field="vlan",
                 expected=vl_id,
                 measurement=msrd_vl_id,
@@ -157,7 +155,7 @@ def _check_access_switchport(
 
 
 def _check_trunk_switchport(
-    dut, test_case, expd_status: SwitchportTrunkExpectation, msrd_status: set
+    dut, check, expd_status: SwitchportTrunkExpectation, msrd_status: set
 ) -> tr.CheckResultsCollection:
     """
     Validate the wireless device is configured as defined relative to the
@@ -180,7 +178,7 @@ def _check_trunk_switchport(
         results.append(
             tr.CheckFailFieldMismatch(
                 device=device,
-                check=test_case,
+                check=check,
                 field="trunk_allowed_vlans",
                 expected=sorted(expd_set),
                 measurement=sorted(msrd_set),

@@ -18,7 +18,6 @@
 
 from typing import Optional
 import importlib.metadata as importlib_metadata
-from pathlib import Path
 
 # -----------------------------------------------------------------------------
 # Public Imports
@@ -88,4 +87,5 @@ def plugin_get_dut(device: Device) -> Optional[AsyncDeviceUnderTest]:
 
 
 def plugin_init(config: dict):
+    """Required netcadcam plugin init hook function"""
     pass

@@ -16,7 +16,7 @@
 # System Imports
 # -----------------------------------------------------------------------------
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Set
 import asyncio
 
 # -----------------------------------------------------------------------------
@@ -39,11 +39,11 @@ if TYPE_CHECKING:
 # Exports
 # -----------------------------------------------------------------------------
 
-__all__ = ["meraki_wireless_tc_vlans"]
+__all__ = ["meraki_wireless_check_vlans"]
 
 
-async def meraki_wireless_tc_vlans(
-    self, testcases: VlanCheckCollection
+async def meraki_wireless_check_vlans(
+    self, check_collection: VlanCheckCollection
 ) -> trt.CheckResultsCollection:
     """
     This code is basically the same from the "switchports" test executor; so we'll lift
@@ -68,9 +68,13 @@ async def meraki_wireless_tc_vlans(
     if vlan_mgmt := api_mgmt_data["wan1"].get("vlan"):
         msrd_vlan_ids.add(vlan_mgmt)
 
+    # this bit of code here is used to extract only the VLANs that are being
+    # used by interfaces; specifically to avoid picking up the native VLAN ID.
+    # TODO: need a better approach to account for the native vlan ID.
+
     expd_vlan_ids = {
         tc.expected_results.vlan.vlan_id
-        for tc in testcases.checks
+        for tc in check_collection.checks
         if tc.expected_results.interfaces
     }
 
@@ -78,43 +82,53 @@ async def meraki_wireless_tc_vlans(
     # carried on the same wired0 (for now), we will only check the exclusive
     # list of expected vlan IDs
 
-    return _test_exclusive_list(device, expected=expd_vlan_ids, measured=msrd_vlan_ids)
+    return _test_exclusive_list(
+        device,
+        check=check_collection.exclusive,
+        expd_vlan_ids=expd_vlan_ids,
+        msrd_vlan_ids=msrd_vlan_ids,
+    )
 
 
-def _test_exclusive_list(device, expected, measured) -> trt.CheckResultsCollection:
+def _test_exclusive_list(
+    device,
+    check: VlanCheckExclusiveList,
+    expd_vlan_ids: Set[int],
+    msrd_vlan_ids: Set[int],
+) -> trt.CheckResultsCollection:
     """
     Validate the wireless device is configured with the exclusive list of VLANs
     as defined in the design.
     """
     results = list()
 
-    tc = VlanCheckExclusiveList()
-
-    if missing_vlans := expected - measured:
+    if missing_vlans := expd_vlan_ids - msrd_vlan_ids:
         results.append(
             trt.CheckFailMissingMembers(
                 device=device,
-                check=tc,
-                field=tc.check_type,
-                expected=sorted(expected),
+                check=check,
+                field=check.check_type,
+                expected=sorted(expd_vlan_ids),
                 missing=sorted(missing_vlans),
             )
         )
 
-    if extra_vlans := measured - expected:
+    if extra_vlans := msrd_vlan_ids - expd_vlan_ids:
         results.append(
             trt.CheckFailExtraMembers(
                 device=device,
-                check=tc,
-                field=tc.check_type,
-                expected=sorted(expected),
+                check=check,
+                field=check.check_type,
+                expected=sorted(expd_vlan_ids),
                 extras=sorted(extra_vlans),
             )
         )
 
     if not any_failures(results):
         results.append(
-            trt.CheckPassResult(device=device, check=tc, measurement=sorted(measured))
+            trt.CheckPassResult(
+                device=device, check=check, measurement=sorted(msrd_vlan_ids)
+            )
         )
 
     return results

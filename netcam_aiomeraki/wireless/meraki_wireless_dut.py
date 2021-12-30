@@ -95,14 +95,14 @@ class MerakiWirelessDeviceUnderTest(MerakiDeviceUnderTest):
     # Support the 'switchports' testcases
     # -------------------------------------------------------------------------
 
-    from .meraki_wireless_tc_switchports import meraki_wireless_tc_switchports
+    from .meraki_wireless_check_switchports import meraki_wireless_check_switchports
 
-    execute_checks.register(meraki_wireless_tc_switchports)
+    execute_checks.register(meraki_wireless_check_switchports)
 
     # -------------------------------------------------------------------------
     # Support the 'vlans' testcases
     # -------------------------------------------------------------------------
 
-    from .merkai_wireless_tc_vlans import meraki_wireless_tc_vlans
+    from .merkai_wireless_check_vlans import meraki_wireless_check_vlans
 
-    execute_checks.register(meraki_wireless_tc_vlans)
+    execute_checks.register(meraki_wireless_check_vlans)

@@ -16,7 +16,7 @@
 # System Imports
 # -----------------------------------------------------------------------------
 
-from typing import TYPE_CHECKING, List, Dict
+from typing import TYPE_CHECKING, List, Dict, Set
 from collections import defaultdict
 
 # -----------------------------------------------------------------------------
@@ -77,7 +77,10 @@ async def meraki_appliance_check_vlans(
 
     results.extend(
         _check_exclusive_list(
-            device=device, check=check_collection.exclusive, measured=map_vl2ifs
+            device=device,
+            check=check_collection.exclusive,
+            expd_vlan_ids={vlan.vlan_id for vlan in expd_vlans},
+            msrd_vlan_ids=set(map_vl2ifs),
         )
     )
 
@@ -157,7 +160,10 @@ def _correlate_vlans_to_ports(
 
 
 def _check_exclusive_list(
-    device, check: VlanCheckExclusiveList, measured
+    device,
+    check: VlanCheckExclusiveList,
+    expd_vlan_ids: Set[int],
+    msrd_vlan_ids: Set[int],
 ) -> trt.CheckResultsCollection:
     """
     Validate the exclusive list of VLANs used by the device against the design
@@ -165,34 +171,33 @@ def _check_exclusive_list(
     """
     results = list()
 
-    s_expd = {vlan.vlan_id for vlan in check.expected_results.vlans}
-    s_msrd = set(measured)
-
-    if missing_vlans := s_expd - s_msrd:
+    if missing_vlans := expd_vlan_ids - msrd_vlan_ids:
         results.append(
             trt.CheckFailMissingMembers(
                 device=device,
                 check=check,
                 field=check.check_type,
-                expected=sorted(s_expd),
+                expected=sorted(expd_vlan_ids),
                 missing=sorted(missing_vlans),
             )
         )
 
-    if extra_vlans := s_msrd - s_expd:
+    if extra_vlans := msrd_vlan_ids - expd_vlan_ids:
         results.append(
             trt.CheckFailExtraMembers(
                 device=device,
                 check=check,
                 field=check.check_type,
-                expected=sorted(s_expd),
+                expected=sorted(expd_vlan_ids),
                 extras=sorted(extra_vlans),
             )
         )
 
     if not any_failures(results):
         results.append(
-            trt.CheckPassResult(device=device, check=check, measurement=sorted(s_msrd))
+            trt.CheckPassResult(
+                device=device, check=check, measurement=sorted(msrd_vlan_ids)
+            )
         )
 
     return results
