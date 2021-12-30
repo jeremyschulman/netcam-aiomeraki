@@ -42,6 +42,12 @@ from tenacity import (
 )
 
 # -----------------------------------------------------------------------------
+# Private Imports
+# -----------------------------------------------------------------------------
+
+from .plugin_init import g_meraki
+
+# -----------------------------------------------------------------------------
 # Exports
 # -----------------------------------------------------------------------------
 
@@ -114,7 +120,7 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
         # The Meraki organizational ID value is currently extracted from an
         # environment variable.  Perhaps rethink this approach; but for now ...
 
-        self.meraki_orgid = environ["MERAKI_ORGID"]
+        self.meraki_orgid: Optional[str] = environ.get("MERAKI_ORGID")
 
         # the device object assigned in the `setup` method
         self.meraki_device: Optional[Dict] = None
@@ -221,6 +227,39 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
     # -------------------------------------------------------------------------
     # Common Meraki Device API calls
     # -------------------------------------------------------------------------
+
+    async def get_org_id(self):
+        """
+        This function is used to obtain the Meraki Organizational ID value.
+
+        Returns
+        -------
+        str
+            The org-Id value.
+        """
+
+        if g_meraki.org_id:
+            self.meraki_orgid = g_meraki.org_id
+            return
+
+        if not g_meraki.org_name:
+            raise RuntimeError("Meraki plugin mssing 'org_name' in configuration")
+
+        orgs = await self.api_cache_get(
+            key="orgs",
+            call="organizations.getOrganizations",
+        )
+
+        if not (
+            found_org := next(
+                iter(org for org in orgs if org["name"] == g_meraki.org_name), None
+            )
+        ):
+            raise RuntimeError(
+                f"Meraki Dashboard does not provide organization: {g_meraki.org_name}"
+            )
+
+        self.meraki_orgid = found_org["id"]
 
     async def get_lldp_status(self) -> dict:
         """
@@ -440,6 +479,8 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
         assignes DUT properties.
         """
         log = get_logger()
+
+        await self.get_org_id()
 
         if not (dev := await self.get_inventory_device(name=self.device.name)):
             raise RuntimeError(

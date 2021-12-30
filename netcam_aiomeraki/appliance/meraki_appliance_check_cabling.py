@@ -89,20 +89,22 @@ async def meraki_device_tc_cabling(
             continue
 
         results.extend(
-            check_one_interface(device=device, check=check, measurement=msrd_ifnei)
+            check_one_interface(dut=dut, check=check, measurement=msrd_ifnei)
         )
 
     return results
 
 
 def check_one_interface(
-    device, check: InterfaceCablingCheck, measurement: dict
+    dut: "MerakiApplianceDeviceUnderTest",
+    check: InterfaceCablingCheck,
+    measurement: dict,
 ) -> trt.CheckResultsCollection:
     """
     Validate one interface cabling inforomation against the design expectations.
     """
     results = list()
-
+    device = dut.device
     expd_nei = check.expected_results
 
     # for now only checking the LLDP status; not checking CDP.
@@ -117,7 +119,9 @@ def check_one_interface(
     msrd_name = msrd_nei["systemName"]
     msrd_port_id = msrd_nei["portId"]
 
-    if not nei_hostname_match(expd_nei.device, msrd_name):
+    if not dut.meraki_hostname_match(
+        expd_nei.device, msrd_name
+    ) and not nei_hostname_match(expd_nei.device, msrd_name):
         results.append(
             trt.CheckFailFieldMismatch(
                 device=device,
