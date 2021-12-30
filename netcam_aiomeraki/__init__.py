@@ -41,7 +41,7 @@ from .wireless import MerakiWirelessDeviceUnderTest
 # Exports
 # -----------------------------------------------------------------------------
 
-__all__ = ["__version__", "get_dut"]
+__all__ = ["plugin_init", "plugin_version", "plugin_get_dut", "plugin_description"]
 
 # -----------------------------------------------------------------------------
 #
@@ -49,7 +49,9 @@ __all__ = ["__version__", "get_dut"]
 #
 # -----------------------------------------------------------------------------
 
-__version__ = importlib_metadata.version(__name__)
+plugin_version = importlib_metadata.version(__name__)
+plugin_description = "NetCadCam plugin for Meraki Dashboard API (asyncio)"
+
 
 dut_by_product = {
     "MX": MerakiApplianceDeviceUnderTest,
@@ -58,7 +60,7 @@ dut_by_product = {
 }
 
 
-def get_dut(device: Device, testcases_dir: Path) -> Optional[AsyncDeviceUnderTest]:
+def plugin_get_dut(device: Device) -> Optional[AsyncDeviceUnderTest]:
     """
     This is the netcam plugin required "hook" function.  This function is
     required to examine the device instance and return back a Device Under Test
@@ -68,10 +70,6 @@ def get_dut(device: Device, testcases_dir: Path) -> Optional[AsyncDeviceUnderTes
     ----------
     device:
         The device instance for which a DUT is required.
-
-    testcases_dir: Path
-        The filepath location where the testcases for this device should be
-        found.
 
     Returns
     -------
@@ -86,4 +84,8 @@ def get_dut(device: Device, testcases_dir: Path) -> Optional[AsyncDeviceUnderTes
     if not (dut_cls := dut_by_product.get(device.product_model[0:2])):
         return None
 
-    return dut_cls(device=device, testcases_dir=testcases_dir)
+    return dut_cls(device=device)
+
+
+def plugin_init(config: dict):
+    pass

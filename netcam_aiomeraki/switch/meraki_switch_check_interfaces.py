@@ -25,12 +25,12 @@ from typing import Optional
 from pydantic import BaseModel
 
 from netcad.device import Device
-from netcad.netcam import tc_result_types as tr
+from netcad.checks import check_result_types as tr
 from netcad.phy_port import PhyPortSpeeds
 
-from netcad.topology.tc_interfaces import (
-    InterfaceTestCases,
-    InterfaceTestCase,
+from netcad.topology.check_interfaces import (
+    InterfaceCheckCollection,
+    InterfaceCheck,
 )
 
 # -----------------------------------------------------------------------------
@@ -42,7 +42,7 @@ from netcad.topology.tc_interfaces import (
 # Exports
 # -----------------------------------------------------------------------------
 
-__all__ = ["meraki_switch_tc_interfaces"]
+__all__ = ["meraki_switch_check_interfaces"]
 
 # -----------------------------------------------------------------------------
 #
@@ -51,9 +51,9 @@ __all__ = ["meraki_switch_tc_interfaces"]
 # -----------------------------------------------------------------------------
 
 
-async def meraki_switch_tc_interfaces(
-    dut, testcases: InterfaceTestCases
-) -> Optional[tr.CollectionTestResults]:
+async def meraki_switch_check_interfaces(
+    dut, check_collection: InterfaceCheckCollection
+) -> Optional[tr.CheckResultsCollection]:
     """
     Validate the device interface configuration and status against the design
     expectations.
@@ -68,24 +68,24 @@ async def meraki_switch_tc_interfaces(
 
     results = list()
 
-    for test_case in testcases.tests:
-        if_name = test_case.test_case_id()
+    for check in check_collection.checks:
+        if_name = check.check_id()
 
         if not (msrd_status := map_port_status.get(if_name)):
             # design is attempting to use an interface that does not exist on
             # the device.  Report this as an error, and continue to next
             # test-case.
-            results.append(tr.FailNoExistsResult(device=device, test_case=test_case))
+            results.append(tr.CheckFailNoExists(device=device, check=check))
             continue
 
         results_iface = meraki_check_switch_one_interface(
-            device=device, test_case=test_case, measurement=msrd_status
+            device=device, check=check, measurement=msrd_status
         )
 
-        if not any(isinstance(res, tr.FailTestCase) for res in results_iface):
+        if not any(isinstance(res, tr.CheckFailResult) for res in results_iface):
             results_iface.append(
-                tr.PassTestCase(
-                    device=device, test_case=test_case, measurement=msrd_status.dict()
+                tr.CheckPassResult(
+                    device=device, check=check, measurement=msrd_status.dict()
                 )
             )
 
@@ -142,16 +142,16 @@ class SwitchInterfaceMeasurement(BaseModel):
 
 def meraki_check_switch_one_interface(
     device: Device,
-    test_case: InterfaceTestCase,
+    check: InterfaceCheck,
     measurement: SwitchInterfaceMeasurement,
-) -> tr.CollectionTestResults:
+) -> tr.CheckResultsCollection:
     """
     Validate the state of one interface agains the design expectations.
     """
 
-    if_flags = test_case.test_params.interface_flags or {}
+    if_flags = check.check_params.interface_flags or {}
     is_reserved = if_flags.get("is_reserved", False)
-    should_oper_status = test_case.expected_results
+    should_oper_status = check.expected_results
 
     # -------------------------------------------------------------------------
     # If the interface is marked as reserved, then report the current state in
@@ -160,9 +160,9 @@ def meraki_check_switch_one_interface(
 
     if is_reserved:
         return [
-            tr.InfoTestCase(
+            tr.CheckInfoLog(
                 device=device,
-                test_case=test_case,
+                check=check,
                 field="is_reserved",
                 measurement=measurement.dict(),
             )
@@ -177,9 +177,9 @@ def meraki_check_switch_one_interface(
 
     if should_oper_status.used != measurement.used:
         results.append(
-            tr.FailFieldMismatchResult(
+            tr.CheckFailFieldMismatch(
                 device=device,
-                test_case=test_case,
+                check=check,
                 field="used",
                 measurement=measurement.used,
             )
@@ -190,9 +190,9 @@ def meraki_check_switch_one_interface(
 
     if should_oper_status.oper_up != measurement.oper_up:
         results.append(
-            tr.FailFieldMismatchResult(
+            tr.CheckFailFieldMismatch(
                 device=device,
-                test_case=test_case,
+                check=check,
                 field="oper_up",
                 measurement=measurement.oper_up,
             )
@@ -200,9 +200,9 @@ def meraki_check_switch_one_interface(
 
     if should_oper_status.speed != measurement.speed:
         results.append(
-            tr.FailFieldMismatchResult(
+            tr.CheckFailFieldMismatch(
                 device=device,
-                test_case=test_case,
+                check=check,
                 field="speed",
                 measurement=measurement.speed,
             )

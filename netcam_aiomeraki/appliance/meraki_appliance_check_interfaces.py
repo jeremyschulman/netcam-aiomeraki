@@ -23,10 +23,10 @@ from typing import TYPE_CHECKING
 # Public Imports
 # -----------------------------------------------------------------------------
 
-from netcad.netcam import tc_result_types as tr
+from netcad.checks import check_result_types as tr
 
-from netcad.topology.tc_interfaces import (
-    InterfaceTestCases,
+from netcad.topology.check_interfaces import (
+    InterfaceCheckCollection,
 )
 
 # -----------------------------------------------------------------------------
@@ -40,7 +40,7 @@ if TYPE_CHECKING:
 # Exports
 # -----------------------------------------------------------------------------
 
-__all__ = ["meraki_appliance_tc_interfaces"]
+__all__ = ["meraki_appliance_check_interfaces"]
 
 # -----------------------------------------------------------------------------
 #
@@ -49,9 +49,9 @@ __all__ = ["meraki_appliance_tc_interfaces"]
 # -----------------------------------------------------------------------------
 
 
-async def meraki_appliance_tc_interfaces(
-    dut, testcases: InterfaceTestCases
-) -> Optional[tr.CollectionTestResults]:
+async def meraki_appliance_check_interfaces(
+    dut, check_collection: InterfaceCheckCollection
+) -> Optional[tr.CheckResultsCollection]:
     """
     Validate the device interface config and status against the design
     expectations.
@@ -64,8 +64,8 @@ async def meraki_appliance_tc_interfaces(
 
     results = list()
 
-    for test_case in testcases.tests:
-        if_name = test_case.test_case_id()
+    for check in check_collection.checks:
+        if_name = check.check_id()
 
         # TODO: for now, only going to check the ports 3+, and not the wan
         #       (ports 1,2).  The SVI is checked via the ipaddrs test cases.
@@ -74,11 +74,11 @@ async def meraki_appliance_tc_interfaces(
             continue
 
         msrd_used = msrd_status["enabled"] is True
-        if msrd_used != test_case.expected_results.used:
+        if msrd_used != check.expected_results.used:
             results.append(
-                tr.FailFieldMismatchResult(
+                tr.CheckFailFieldMismatch(
                     device=device,
-                    test_case=test_case,
+                    check=check,
                     field="used",
                     measurement=msrd_used,
                 )
@@ -86,7 +86,7 @@ async def meraki_appliance_tc_interfaces(
             continue
 
         results.append(
-            tr.PassTestCase(device=device, test_case=test_case, measurement=msrd_status)
+            tr.CheckPassResult(device=device, check=check, measurement=msrd_status)
         )
 
     # return all testing results

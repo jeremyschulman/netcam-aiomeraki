@@ -23,8 +23,9 @@ import asyncio
 # Public Imports
 # -----------------------------------------------------------------------------
 
-from netcad.netcam import any_failures, tc_result_types as trt
-from netcad.vlan.tc_vlans import VlanTestCases, VlanTestCaseExclusiveList
+from netcad.netcam import any_failures
+from netcad.checks import check_result_types as trt
+from netcad.vlan.check_vlans import VlanCheckCollection, VlanCheckExclusiveList
 
 # -----------------------------------------------------------------------------
 # Private Imports
@@ -42,8 +43,8 @@ __all__ = ["meraki_wireless_tc_vlans"]
 
 
 async def meraki_wireless_tc_vlans(
-    self, testcases: VlanTestCases
-) -> trt.CollectionTestResults:
+    self, testcases: VlanCheckCollection
+) -> trt.CheckResultsCollection:
     """
     This code is basically the same from the "switchports" test executor; so we'll lift
     that code here.
@@ -69,7 +70,7 @@ async def meraki_wireless_tc_vlans(
 
     expd_vlan_ids = {
         tc.expected_results.vlan.vlan_id
-        for tc in testcases.tests
+        for tc in testcases.checks
         if tc.expected_results.interfaces
     }
 
@@ -80,21 +81,21 @@ async def meraki_wireless_tc_vlans(
     return _test_exclusive_list(device, expected=expd_vlan_ids, measured=msrd_vlan_ids)
 
 
-def _test_exclusive_list(device, expected, measured) -> trt.CollectionTestResults:
+def _test_exclusive_list(device, expected, measured) -> trt.CheckResultsCollection:
     """
     Validate the wireless device is configured with the exclusive list of VLANs
     as defined in the design.
     """
     results = list()
 
-    tc = VlanTestCaseExclusiveList()
+    tc = VlanCheckExclusiveList()
 
     if missing_vlans := expected - measured:
         results.append(
-            trt.FailMissingMembersResult(
+            trt.CheckFailMissingMembers(
                 device=device,
-                test_case=tc,
-                field=tc.test_case,
+                check=tc,
+                field=tc.check_type,
                 expected=sorted(expected),
                 missing=sorted(missing_vlans),
             )
@@ -102,10 +103,10 @@ def _test_exclusive_list(device, expected, measured) -> trt.CollectionTestResult
 
     if extra_vlans := measured - expected:
         results.append(
-            trt.FailExtraMembersResult(
+            trt.CheckFailExtraMembers(
                 device=device,
-                test_case=tc,
-                field=tc.test_case,
+                check=tc,
+                field=tc.check_type,
                 expected=sorted(expected),
                 extras=sorted(extra_vlans),
             )
@@ -113,7 +114,7 @@ def _test_exclusive_list(device, expected, measured) -> trt.CollectionTestResult
 
     if not any_failures(results):
         results.append(
-            trt.PassTestCase(device=device, test_case=tc, measurement=sorted(measured))
+            trt.CheckPassResult(device=device, check=tc, measurement=sorted(measured))
         )
 
     return results

@@ -16,7 +16,7 @@
 # System Imports
 # -----------------------------------------------------------------------------
 
-from typing import Optional
+from typing import Optional, List, Dict
 from functools import singledispatchmethod
 
 # -----------------------------------------------------------------------------
@@ -25,8 +25,8 @@ from functools import singledispatchmethod
 
 from netcam_aiomeraki.meraki_dut import (
     MerakiDeviceUnderTest,
-    TestCases,
-    CollectionTestResults,
+    CheckCollection,
+    CheckResultsCollection,
 )
 
 
@@ -35,7 +35,7 @@ class MerakiSwitchDeviceUnderTest(MerakiDeviceUnderTest):
     Support the Meraki switch devices, product models that being with "MS".
     """
 
-    async def get_port_config(self) -> dict:
+    async def get_port_config(self) -> List[Dict]:
         """
         Obtain the switch port configuration.  The API content is cached.
         """
@@ -62,43 +62,43 @@ class MerakiSwitchDeviceUnderTest(MerakiDeviceUnderTest):
     # -------------------------------------------------------------------------
 
     @singledispatchmethod
-    async def execute_testcases(
-        self, testcases: TestCases
-    ) -> Optional["CollectionTestResults"]:
+    async def execute_checks(
+        self, testcases: CheckCollection
+    ) -> Optional["CheckResultsCollection"]:
         """
         If this DUT does not explicity implement a test-case, then try the
         superclass.
         """
-        return await super().execute_testcases(testcases)
+        return await super().execute_checks(testcases)
 
     # -------------------------------------------------------------------------
     # Support the 'cabling' testcases
     # -------------------------------------------------------------------------
 
-    from .meraki_switch_tc_cabling import meraki_ms_tc_cabling
+    from .meraki_switch_check_cabling import meraki_switch_check_cabling
 
-    execute_testcases.register(meraki_ms_tc_cabling)
+    execute_checks.register(meraki_switch_check_cabling)
 
     # -------------------------------------------------------------------------
     # Support the 'interfaces' testcases
     # -------------------------------------------------------------------------
 
-    from .meraki_switch_tc_interfaces import meraki_switch_tc_interfaces
+    from .meraki_switch_check_interfaces import meraki_switch_check_interfaces
 
-    execute_testcases.register(meraki_switch_tc_interfaces)
+    execute_checks.register(meraki_switch_check_interfaces)
 
     # -------------------------------------------------------------------------
     # Support the 'switchports' testcases
     # -------------------------------------------------------------------------
 
-    from .meraki_switch_tc_switchports import meraki_switch_tc_switchports
+    from .meraki_switch_check_switchports import meraki_switch_check_switchports
 
-    execute_testcases.register(meraki_switch_tc_switchports)
+    execute_checks.register(meraki_switch_check_switchports)
 
     # -------------------------------------------------------------------------
     # Support the 'vlans' testcases
     # -------------------------------------------------------------------------
 
-    from .meraki_switch_tc_vlans import meraki_switch_tc_vlans
+    from .meraki_switch_tc_vlans import meraki_switch_check_vlans
 
-    execute_testcases.register(meraki_switch_tc_vlans)
+    execute_checks.register(meraki_switch_check_vlans)

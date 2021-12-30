@@ -24,8 +24,14 @@ from collections import defaultdict
 # -----------------------------------------------------------------------------
 
 from netcad.device import Device
-from netcad.netcam import any_failures, tc_result_types as trt
-from netcad.vlan.tc_vlans import VlanTestCases, VlanTestCase, VlanTestCaseExclusiveList
+from netcad.netcam import any_failures
+from netcad.checks import check_result_types as trt
+from netcad.vlan import VlanProfile
+from netcad.vlan.check_vlans import (
+    VlanCheckCollection,
+    VlanCheck,
+    VlanCheckExclusiveList,
+)
 from netcad.helpers import parse_istrange
 
 # -----------------------------------------------------------------------------
@@ -40,12 +46,12 @@ if TYPE_CHECKING:
 # Exports
 # -----------------------------------------------------------------------------
 
-__all__ = ["meraki_mx_tc_vlans"]
+__all__ = ["meraki_appliance_check_vlans"]
 
 
-async def meraki_mx_tc_vlans(
-    self, testcases: VlanTestCases
-) -> trt.CollectionTestResults:
+async def meraki_appliance_check_vlans(
+    self, check_collection: VlanCheckCollection
+) -> trt.CheckResultsCollection:
     """
     Validate the device use of VLANs against the design expectations.
     """
@@ -61,25 +67,29 @@ async def meraki_mx_tc_vlans(
     # VLANs that have interfaces assigned.  There are some cases where the VLAN
     # is defined, but no interfaces; for example the native VLAN on trunk ports.
 
-    expd_vlan_ids = [
-        tc.expected_results.vlan.vlan_id
-        for tc in testcases.tests
-        if tc.expected_results.interfaces
+    expd_vlans = [
+        check.expected_results.vlan
+        for check in check_collection.checks
+        if check.expected_results.interfaces
     ]
 
-    map_vl2ifs = _correlate_vlans_to_ports(msrd_ports_config, expd_vlan_ids)
+    map_vl2ifs = _correlate_vlans_to_ports(msrd_ports_config, expd_vlans)
 
     results.extend(
-        _test_exclusive_list(device=device, expected=expd_vlan_ids, measured=map_vl2ifs)
+        _check_exclusive_list(
+            device=device, check=check_collection.exclusive, measured=map_vl2ifs
+        )
     )
 
-    for test_case in testcases.tests:
-        results.extend(_test_one_vlan(device, test_case, map_vl2ifs))
+    for check in check_collection.checks:
+        results.extend(_check_one_vlan(device, check, map_vl2ifs))
 
     return results
 
 
-def _correlate_vlans_to_ports(port_configs: List, expd_vlan_ids: List) -> Dict:
+def _correlate_vlans_to_ports(
+    port_configs: List, expd_vlans: List[VlanProfile]
+) -> Dict:
     """
     The API does not provide a means to correlate the interfaces to VLANs as one
     would find in other swtich products.  This function computes that mapping
@@ -87,6 +97,7 @@ def _correlate_vlans_to_ports(port_configs: List, expd_vlan_ids: List) -> Dict:
     """
 
     map_vlans_to_interfaces = defaultdict(set)
+    expd_vlan_ids = [vlan.vlan_id for vlan in expd_vlans]
 
     def is_unused_port(_data):
         """
@@ -145,24 +156,24 @@ def _correlate_vlans_to_ports(port_configs: List, expd_vlan_ids: List) -> Dict:
     return map_vlans_to_interfaces
 
 
-def _test_exclusive_list(device, expected, measured) -> trt.CollectionTestResults:
+def _check_exclusive_list(
+    device, check: VlanCheckExclusiveList, measured
+) -> trt.CheckResultsCollection:
     """
     Validate the exclusive list of VLANs used by the device against the design
     expectation.
     """
     results = list()
 
-    s_expd = set(expected)
+    s_expd = {vlan.vlan_id for vlan in check.expected_results.vlans}
     s_msrd = set(measured)
-
-    tc = VlanTestCaseExclusiveList()
 
     if missing_vlans := s_expd - s_msrd:
         results.append(
-            trt.FailMissingMembersResult(
+            trt.CheckFailMissingMembers(
                 device=device,
-                test_case=tc,
-                field=tc.test_case,
+                check=check,
+                field=check.check_type,
                 expected=sorted(s_expd),
                 missing=sorted(missing_vlans),
             )
@@ -170,10 +181,10 @@ def _test_exclusive_list(device, expected, measured) -> trt.CollectionTestResult
 
     if extra_vlans := s_msrd - s_expd:
         results.append(
-            trt.FailExtraMembersResult(
+            trt.CheckFailExtraMembers(
                 device=device,
-                test_case=tc,
-                field=tc.test_case,
+                check=check,
+                field=check.check_type,
                 expected=sorted(s_expd),
                 extras=sorted(extra_vlans),
             )
@@ -181,15 +192,15 @@ def _test_exclusive_list(device, expected, measured) -> trt.CollectionTestResult
 
     if not any_failures(results):
         results.append(
-            trt.PassTestCase(device=device, test_case=tc, measurement=sorted(s_msrd))
+            trt.CheckPassResult(device=device, check=check, measurement=sorted(s_msrd))
         )
 
     return results
 
 
-def _test_one_vlan(
-    device: Device, test_case: VlanTestCase, vlans_to_intfs: dict
-) -> trt.CollectionTestResults:
+def _check_one_vlan(
+    device: Device, check: VlanCheck, vlans_to_intfs: dict
+) -> trt.CheckResultsCollection:
     """
     Test one VLAN use of related interfaces against the design expectations.
     """
@@ -199,14 +210,14 @@ def _test_one_vlan(
     # The test case ID is the VLAN ID in string form, we will want it as
     # an int since that is how it is stored in the Meraki API.
 
-    vlan_id = int(test_case.test_case_id())
+    vlan_id = int(check.check_id())
 
     # The expect list of interface names (ports), exclude the "Vlan" SVI
     # interfaces, as those are checked by the "ipaddrs" test-case processing.
 
     expd_if_set = {
         if_name
-        for if_name in test_case.expected_results.interfaces
+        for if_name in check.expected_results.interfaces
         if not if_name.startswith("Vlan")
     }
 
@@ -214,16 +225,16 @@ def _test_one_vlan(
 
     if msrd_if_set == expd_if_set:
         return [
-            trt.PassTestCase(
-                device=device, test_case=test_case, measurement=sorted(msrd_if_set)
+            trt.CheckPassResult(
+                device=device, check=check, measurement=sorted(msrd_if_set)
             )
         ]
 
     results.append(
-        trt.FailFieldMismatchResult(
+        trt.CheckFailFieldMismatch(
             device,
-            test_case,
-            "interfaces",
+            check=check,
+            field="interfaces",
             measurement=sorted(msrd_if_set, key=int),
             expected=sorted(expd_if_set, key=int),
         )

@@ -25,8 +25,8 @@ from functools import singledispatchmethod
 
 from netcam_aiomeraki.meraki_dut import (
     MerakiDeviceUnderTest,
-    TestCases,
-    CollectionTestResults,
+    CheckCollection,
+    CheckResultsCollection,
 )
 
 # -----------------------------------------------------------------------------
@@ -58,14 +58,14 @@ class MerakiWirelessDeviceUnderTest(MerakiDeviceUnderTest):
     # -------------------------------------------------------------------------
 
     @singledispatchmethod
-    async def execute_testcases(
-        self, testcases: TestCases
-    ) -> Optional["CollectionTestResults"]:
+    async def execute_checks(
+        self, testcases: CheckCollection
+    ) -> Optional["CheckResultsCollection"]:
         """
         If this DUT does not explicity implement a test-case, then try the
         superclass.
         """
-        return await super().execute_testcases(testcases)
+        return await super().execute_checks(testcases)
 
     # -------------------------------------------------------------------------
     # Support the 'cabling' testcases
@@ -73,7 +73,7 @@ class MerakiWirelessDeviceUnderTest(MerakiDeviceUnderTest):
 
     from .meraki_wireless_tc_cabling import meraki_device_tc_cabling
 
-    execute_testcases.register(meraki_device_tc_cabling)
+    execute_checks.register(meraki_device_tc_cabling)
 
     # -------------------------------------------------------------------------
     # Support the 'ipaddrs' testcases
@@ -81,7 +81,7 @@ class MerakiWirelessDeviceUnderTest(MerakiDeviceUnderTest):
 
     from .meraki_wireless_tc_ipaddrs import meraki_wireless_tc_ipaddrs
 
-    execute_testcases.register(meraki_wireless_tc_ipaddrs)
+    execute_checks.register(meraki_wireless_tc_ipaddrs)
 
     # -------------------------------------------------------------------------
     # Support the 'interfaces' testcases
@@ -89,7 +89,7 @@ class MerakiWirelessDeviceUnderTest(MerakiDeviceUnderTest):
 
     from .meraki_wireless_tc_interfaces import meraki_wireless_tc_interfaces
 
-    execute_testcases.register(meraki_wireless_tc_interfaces)
+    execute_checks.register(meraki_wireless_tc_interfaces)
 
     # -------------------------------------------------------------------------
     # Support the 'switchports' testcases
@@ -97,7 +97,7 @@ class MerakiWirelessDeviceUnderTest(MerakiDeviceUnderTest):
 
     from .meraki_wireless_tc_switchports import meraki_wireless_tc_switchports
 
-    execute_testcases.register(meraki_wireless_tc_switchports)
+    execute_checks.register(meraki_wireless_tc_switchports)
 
     # -------------------------------------------------------------------------
     # Support the 'vlans' testcases
@@ -105,4 +105,4 @@ class MerakiWirelessDeviceUnderTest(MerakiDeviceUnderTest):
 
     from .merkai_wireless_tc_vlans import meraki_wireless_tc_vlans
 
-    execute_testcases.register(meraki_wireless_tc_vlans)
+    execute_checks.register(meraki_wireless_tc_vlans)

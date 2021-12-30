@@ -23,10 +23,10 @@ from typing import TYPE_CHECKING
 # Public Imports
 # -----------------------------------------------------------------------------
 
-from netcad.netcam import tc_result_types as tr
+from netcad.checks import check_result_types as tr
 
-from netcad.topology.tc_interfaces import (
-    InterfaceTestCases,
+from netcad.topology.check_interfaces import (
+    InterfaceCheckCollection,
 )
 
 # -----------------------------------------------------------------------------
@@ -50,8 +50,8 @@ __all__ = ["meraki_wireless_tc_interfaces"]
 
 
 async def meraki_wireless_tc_interfaces(
-    dut, testcases: InterfaceTestCases
-) -> Optional[tr.CollectionTestResults]:
+    dut, testcases: InterfaceCheckCollection
+) -> Optional[tr.CheckResultsCollection]:
     """
     Validate the wireless device interfaces against the design.
     """
@@ -82,12 +82,12 @@ async def meraki_wireless_tc_interfaces(
     map_port_status["wan1"] = True
     results = list()
 
-    for test_case in testcases.tests:
-        if_name = test_case.test_case_id()
+    for test_case in testcases.checks:
+        if_name = test_case.check_id()
 
         # if the expected interface does not exist then report the error
         if not (msrd_status := map_port_status.get(if_name)):
-            results.append(tr.FailNoExistsResult(device=device, test_case=test_case))
+            results.append(tr.CheckFailNoExists(device=device, check=test_case))
             continue
 
         # not checking the status of wan1 since it is always there.  The IP
@@ -99,9 +99,9 @@ async def meraki_wireless_tc_interfaces(
         msrd_used = msrd_status is True
         if msrd_used != test_case.expected_results.used:
             results.append(
-                tr.FailFieldMismatchResult(
+                tr.CheckFailFieldMismatch(
                     device=device,
-                    test_case=test_case,
+                    check=test_case,
                     field="used",
                     measurement=msrd_used,
                 )
@@ -109,7 +109,7 @@ async def meraki_wireless_tc_interfaces(
             continue
 
         results.append(
-            tr.PassTestCase(device=device, test_case=test_case, measurement=msrd_status)
+            tr.CheckPassResult(device=device, check=test_case, measurement=msrd_status)
         )
 
     # return all testing results

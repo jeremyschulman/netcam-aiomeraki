@@ -23,14 +23,15 @@ from typing import Sequence, List
 # Public Imports
 # -----------------------------------------------------------------------------
 
-from netcad.topology.tc_ipaddrs import (
-    IPInterfacesTestCases,
-    IPInterfaceTestCase,
-    IPInterfaceExclusiveListTestCase,
+from netcad.topology.check_ipaddrs import (
+    IpInterfacesCheckCollection,
+    IpInterfaceCheck,
+    IpInterfaceCheckExclusiveList,
 )
 
 from netcad.device import Device
-from netcad.netcam import any_failures, tc_result_types as trt
+from netcad.netcam import any_failures
+from netcad.checks import check_result_types as trt
 
 # -----------------------------------------------------------------------------
 # Private Imports
@@ -44,7 +45,7 @@ if TYPE_CHECKING:
 # Exports
 # -----------------------------------------------------------------------------
 
-__all__ = ["meraki_appliance_tc_ipaddrs"]
+__all__ = ["meraki_appliance_check_ipaddrs"]
 
 
 # -----------------------------------------------------------------------------
@@ -54,9 +55,9 @@ __all__ = ["meraki_appliance_tc_ipaddrs"]
 # -----------------------------------------------------------------------------
 
 
-async def meraki_appliance_tc_ipaddrs(
-    self, testcases: IPInterfacesTestCases
-) -> trt.CollectionTestResults:
+async def meraki_appliance_check_ipaddrs(
+    self, check_collection: IpInterfacesCheckCollection
+) -> trt.CheckResultsCollection:
     """
     Validate the device usage of IP addresses against the design expectations.
     """
@@ -77,21 +78,19 @@ async def meraki_appliance_tc_ipaddrs(
     results = list()
     if_names = list()
 
-    for test_case in testcases.tests:
+    for check in check_collection.checks:
 
-        if_name = test_case.test_case_id()
+        if_name = check.check_id()
         if_names.append(if_name)
 
         if not (if_ip_data := map_msrd_svi_config.get(if_name)):
             results.append(
-                trt.FailNoExistsResult(
-                    device=device, test_case=test_case, field="if_ipaddr"
-                )
+                trt.CheckFailNoExists(device=device, check=check, field="if_ipaddr")
             )
             continue
 
-        one_results = await _test_one_interface(
-            device=device, test_case=test_case, msrd_data=if_ip_data
+        one_results = await _check_one_interface(
+            device=device, check=check, msrd_data=if_ip_data
         )
 
         results.extend(one_results)
@@ -99,7 +98,7 @@ async def meraki_appliance_tc_ipaddrs(
     # Validate the exclusive list of IP addresses expected
 
     results.extend(
-        _test_exclusive_list(
+        _check_exclusive_list(
             device=device,
             expd_if_names=if_names,
             msrd_if_names=list(map_msrd_svi_config),
@@ -112,11 +111,11 @@ async def meraki_appliance_tc_ipaddrs(
 # -----------------------------------------------------------------------------
 
 
-async def _test_one_interface(
+async def _check_one_interface(
     device: Device,
-    test_case: IPInterfaceTestCase,
+    check: IpInterfaceCheck,
     msrd_data: dict,
-) -> trt.CollectionTestResults:
+) -> trt.CheckResultsCollection:
     """
     Validate one interface IP address usage against the design expectations.
     """
@@ -130,13 +129,13 @@ async def _test_one_interface(
     # Ensure the IP interface value matches.
     # -------------------------------------------------------------------------
 
-    expd_if_ipaddr = test_case.expected_results.if_ipaddr
+    expd_if_ipaddr = check.expected_results.if_ipaddr
 
     if msrd_if_ipaddr != expd_if_ipaddr:
         results.append(
-            trt.FailFieldMismatchResult(
+            trt.CheckFailFieldMismatch(
                 device=device,
-                test_case=test_case,
+                check=check,
                 field="if_ipaddr",
                 measurement=msrd_if_ipaddr,
             )
@@ -144,15 +143,15 @@ async def _test_one_interface(
 
     if not any_failures(results):
         results.append(
-            trt.PassTestCase(device=device, test_case=test_case, measurement=msrd_data)
+            trt.CheckPassResult(device=device, check=check, measurement=msrd_data)
         )
 
     return results
 
 
-def _test_exclusive_list(
+def _check_exclusive_list(
     device: Device, expd_if_names: Sequence[str], msrd_if_names: List[str]
-) -> trt.CollectionTestResults:
+) -> trt.CheckResultsCollection:
     """
     Validate the exclusive list of IP addresses used by the device against the
     design expectations.
@@ -160,19 +159,17 @@ def _test_exclusive_list(
     # the previous per-interface checks for any missing; therefore we only need
     # to check for any extra interfaces found on the device.
 
-    tc = IPInterfaceExclusiveListTestCase()
+    tc = IpInterfaceCheckExclusiveList()
 
     if extras := set(msrd_if_names) - set(expd_if_names):
-        result = trt.FailExtraMembersResult(
+        result = trt.CheckFailExtraMembers(
             device=device,
-            test_case=tc,
+            check=tc,
             field="exclusive_list",
             expected=sorted(expd_if_names),
             extras=sorted(extras),
         )
     else:
-        result = trt.PassTestCase(
-            device=device, test_case=tc, measurement=msrd_if_names
-        )
+        result = trt.CheckPassResult(device=device, check=tc, measurement=msrd_if_names)
 
     return [result]

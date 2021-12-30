@@ -23,10 +23,11 @@ from typing import TYPE_CHECKING
 # Public Imports
 # -----------------------------------------------------------------------------
 
-from netcad.netcam import tc_result_types as tr, any_failures
+from netcad.netcam import any_failures
+from netcad.checks import check_result_types as tr
 
-from netcad.vlan.tc_switchports import (
-    SwitchportTestCases,
+from netcad.vlan.check_switchports import (
+    SwitchportCheckCollection,
     SwitchportAccessExpectation,
     SwitchportTrunkExpectation,
 )
@@ -53,8 +54,8 @@ __all__ = ["meraki_wireless_tc_switchports"]
 
 
 async def meraki_wireless_tc_switchports(
-    self, testcases: SwitchportTestCases
-) -> tr.CollectionTestResults:
+    self, testcases: SwitchportCheckCollection
+) -> tr.CheckResultsCollection:
     """
     The Meraki APs are not technically "switches", but the construct of switchports and
     VLANs can be made by examining the SSID configurations for vlans in use.
@@ -98,16 +99,16 @@ async def meraki_wireless_tc_switchports(
     # about the behavior of the AP.
 
     results = list()
-    for test_case in testcases.tests:
+    for test_case in testcases.checks:
         expd_status = test_case.expected_results
 
-        if_name = test_case.test_case_id()
+        if_name = test_case.check_id()
 
         # if the interface from the design does not exist on the device, then
         # report this error and go to next test-case.
 
         if not (msrd_port := map_msrd_status.get(if_name)):
-            results.append(tr.FailNoExistsResult(device=device, test_case=test_case))
+            results.append(tr.CheckFailNoExists(device=device, check=test_case))
             continue
 
         # check the switchport mode value.  If they do not match, then we report
@@ -122,8 +123,8 @@ async def meraki_wireless_tc_switchports(
 
         if not any_failures(mode_results):
             results.append(
-                tr.PassTestCase(
-                    device=device, test_case=test_case, measurement=msrd_port
+                tr.CheckPassResult(
+                    device=device, check=test_case, measurement=msrd_port
                 )
             )
 
@@ -132,7 +133,7 @@ async def meraki_wireless_tc_switchports(
 
 def _check_access_switchport(
     dut, test_case, expd_status: SwitchportAccessExpectation, msrd_status: dict
-) -> tr.CollectionTestResults:
+) -> tr.CheckResultsCollection:
     """
     Only one check for now, that is to validate that the configured VLAN on the
     access port matches the test case.
@@ -143,9 +144,9 @@ def _check_access_switchport(
 
     if vl_id and (msrd_vl_id := msrd_status["vlan"]) != vl_id:
         results.append(
-            tr.FailFieldMismatchResult(
+            tr.CheckFailFieldMismatch(
                 device=device,
-                test_case=test_case,
+                check=test_case,
                 field="vlan",
                 expected=vl_id,
                 measurement=msrd_vl_id,
@@ -157,7 +158,7 @@ def _check_access_switchport(
 
 def _check_trunk_switchport(
     dut, test_case, expd_status: SwitchportTrunkExpectation, msrd_status: set
-) -> tr.CollectionTestResults:
+) -> tr.CheckResultsCollection:
     """
     Validate the wireless device is configured as defined relative to the
     VLANs used and the configuraiton of the wired0 port.
@@ -177,9 +178,9 @@ def _check_trunk_switchport(
 
     if expd_set != msrd_set:
         results.append(
-            tr.FailFieldMismatchResult(
+            tr.CheckFailFieldMismatch(
                 device=device,
-                test_case=test_case,
+                check=test_case,
                 field="trunk_allowed_vlans",
                 expected=sorted(expd_set),
                 measurement=sorted(msrd_set),

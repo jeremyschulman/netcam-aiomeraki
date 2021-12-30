@@ -28,8 +28,8 @@ from http import HTTPStatus
 
 from netcad.logger import get_logger
 from netcad.netcam.dut import AsyncDeviceUnderTest
-from netcad.netcam import CollectionTestResults
-from netcad.testing_services import TestCases
+from netcad.netcam import CheckResultsCollection
+from netcad.checks import CheckCollection
 
 from meraki.aio import AsyncDashboardAPI, AsyncAPIError
 
@@ -45,7 +45,7 @@ from tenacity import (
 # Exports
 # -----------------------------------------------------------------------------
 
-__all__ = ["MerakiDeviceUnderTest", "TestCases", "CollectionTestResults"]
+__all__ = ["MerakiDeviceUnderTest", "CheckCollection", "CheckResultsCollection"]
 
 AsyncAPIErrorLike = TypeVar("AsyncAPIErrorLike", AsyncAPIError, BaseException)
 
@@ -170,7 +170,7 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
 
         return expected == measured.split()[-1]
 
-    async def api_cache_get(self, key: str, call: str, **kwargs) -> dict:
+    async def api_cache_get(self, key: str, call: str, **kwargs):
         """
         This function is used to cache responses from the Meraki API so that
         when various testing executors that need the same data do not make
@@ -361,7 +361,7 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
 
             if rt_exc.status == HTTPStatus.TOO_MANY_REQUESTS:
                 log.info(
-                    f"DUT: {self.device.name}: Still working on Meraki ping request ..."
+                    f"{self.device.name}: Still working on Meraki ping request ..."
                 )
                 return True
 
@@ -395,7 +395,7 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
 
             except (AsyncAPIError, RetryError):
                 log.error(
-                    f"DUT: {self.device.name}: Timeout starting Meraki ping check ... proceeding regardless"
+                    f"{self.device.name}: Timeout starting Meraki ping check ... proceeding regardless"
                 )
                 self.meraki_device_reachable = True
                 return ping_check
@@ -407,7 +407,7 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
                     ping_check = await _check_ping(api, ping_job)
                 except (AsyncAPIError, RetryError):
                     log.error(
-                        f"DUT: {self.device.name}: Timeout checking Meraki ping ... proceeding regardless"
+                        f"{self.device.name}: Timeout checking Meraki ping ... proceeding regardless"
                     )
                     self.meraki_device_reachable = True
                     return ping_check
@@ -424,7 +424,7 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
             "ready",
         )
         if not self.meraki_device_reachable:
-            log.error(f"DUT: {self.device.name}: Ping check failed, status: {p_st}")
+            log.error(f"{self.device.name}: Ping check failed, status: {p_st}")
 
         return ping_check
 
@@ -443,21 +443,21 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
 
         if not (dev := await self.get_inventory_device(name=self.device.name)):
             raise RuntimeError(
-                f"DUT: {self.device.name}: not found in Meraki Dashboard, check name in system"
+                f"{self.device.name}: not found in Meraki Dashboard, check name in system"
             )
 
         self.meraki_device = dev
 
-        log.info(f"DUT: {self.device.name}: Running Meraki connectivity ping check ...")
+        log.info(f"{self.device.name}: Running Meraki connectivity ping check ...")
 
         await self.ping_check()
         if not self.meraki_device_reachable:
             raise RuntimeError("Device fails reachability ping-check")
 
     @singledispatchmethod
-    async def execute_testcases(
-        self, testcases: TestCases
-    ) -> Optional["CollectionTestResults"]:
+    async def execute_checks(
+        self, testcases: CheckCollection
+    ) -> Optional["CheckResultsCollection"]:
         """
         This method is only called when the sub-classing DUT does not implement
         a specific set of testcases; for example a DUT does not implement the
@@ -482,6 +482,6 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
     # Support the 'device' testcases
     # -------------------------------------------------------------------------
 
-    from .meraki_tc_device import meraki_tc_device_info
+    from .meraki_check_device import meraki_check_device_info
 
-    execute_testcases.register(meraki_tc_device_info)
+    execute_checks.register(meraki_check_device_info)

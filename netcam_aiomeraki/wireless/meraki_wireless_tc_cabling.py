@@ -22,16 +22,17 @@ from typing import TYPE_CHECKING, Optional
 # Public Imports
 # -----------------------------------------------------------------------------
 
-from netcad.topology.tc_cabling_nei import (
-    InterfaceCablingTestCases,
-    InterfaceCablingTestCase,
+from netcad.topology.check_cabling_nei import (
+    InterfaceCablingCheckCollection,
+    InterfaceCablingCheck,
 )
 from netcad.topology.utils_cabling_nei import (
     nei_interface_match,
     nei_hostname_match,
 )
 
-from netcad.netcam import any_failures, tc_result_types as trt
+from netcad.netcam import any_failures
+from netcad.checks import check_result_types as trt
 
 # -----------------------------------------------------------------------------
 # Private Imports
@@ -55,8 +56,8 @@ __all__ = ["meraki_device_tc_cabling"]
 
 
 async def meraki_device_tc_cabling(
-    self, testcases: InterfaceCablingTestCases
-) -> Optional[trt.CollectionTestResults]:
+    self, testcases: InterfaceCablingCheckCollection
+) -> Optional[trt.CheckResultsCollection]:
     """
     Validate the cabling neighborship data (LLDP/CDP) of the device against the
     design.
@@ -78,15 +79,15 @@ async def meraki_device_tc_cabling(
         port_name: port_data for port_name, port_data in api_data["ports"].items()
     }
 
-    for test_case in testcases.tests:
-        if_name = test_case.test_case_id()
+    for test_case in testcases.checks:
+        if_name = test_case.check_id()
 
         if not (msrd_ifnei := map_msrd_port_nei.get(if_name)):
-            results.append(trt.FailNoExistsResult(device=device, test_case=test_case))
+            results.append(trt.CheckFailNoExists(device=device, check=test_case))
             continue
 
         results.extend(
-            test_one_interface(dut=dut, test_case=test_case, measurement=msrd_ifnei)
+            test_one_interface(dut=dut, check_type=test_case, measurement=msrd_ifnei)
         )
 
     return results
@@ -94,9 +95,9 @@ async def meraki_device_tc_cabling(
 
 def test_one_interface(
     dut: "MerakiWirelessDeviceUnderTest",
-    test_case: InterfaceCablingTestCase,
+    test_case: InterfaceCablingCheck,
     measurement: dict,
-) -> trt.CollectionTestResults:
+) -> trt.CheckResultsCollection:
     """
     Validate one of the interfaces on the wireless device for cabling.
     """
@@ -109,8 +110,8 @@ def test_one_interface(
 
     if not (msrd_nei := measurement.get("lldp")):
         results.append(
-            trt.FailNoExistsResult(
-                device=device, test_case=test_case, measurement=measurement
+            trt.CheckFailNoExists(
+                device=device, check_type=test_case, measurement=measurement
             )
         )
         return results
@@ -122,9 +123,9 @@ def test_one_interface(
         expd_nei.device, msrd_name
     ) and not dut.meraki_hostname_match(expd_nei.device, msrd_name):
         results.append(
-            trt.FailFieldMismatchResult(
+            trt.CheckFailFieldMismatch(
                 device=device,
-                test_case=test_case,
+                check_type=test_case,
                 field="device",
                 measurement=msrd_name,
             )
@@ -132,9 +133,9 @@ def test_one_interface(
 
     if not nei_interface_match(expd_nei.port_id, msrd_port_id):
         results.append(
-            trt.FailFieldMismatchResult(
+            trt.CheckFailFieldMismatch(
                 device=device,
-                test_case=test_case,
+                check_type=test_case,
                 field="port_id",
                 measurement=msrd_port_id,
             )
@@ -142,8 +143,8 @@ def test_one_interface(
 
     if not any_failures(results):
         results.append(
-            trt.PassTestCase(
-                device=device, test_case=test_case, measurement=measurement
+            trt.CheckPassResult(
+                device=device, check_type=test_case, measurement=measurement
             )
         )
 

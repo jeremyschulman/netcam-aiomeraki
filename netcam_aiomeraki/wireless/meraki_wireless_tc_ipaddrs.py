@@ -36,14 +36,15 @@ from ipaddress import IPv4Interface
 # Public Imports
 # -----------------------------------------------------------------------------
 
-from netcad.topology.tc_ipaddrs import (
-    IPInterfacesTestCases,
-    IPInterfaceTestCase,
-    IPInterfaceExclusiveListTestCase,
+from netcad.topology.check_ipaddrs import (
+    IpInterfacesCheckCollection,
+    IpInterfaceCheck,
+    IpInterfaceCheckExclusiveList,
 )
 
 from netcad.device import Device
-from netcad.netcam import any_failures, tc_result_types as trt
+from netcad.netcam import any_failures
+from netcad.checks import check_result_types as trt
 
 # -----------------------------------------------------------------------------
 # Private Imports
@@ -68,8 +69,8 @@ __all__ = ["meraki_wireless_tc_ipaddrs"]
 
 
 async def meraki_wireless_tc_ipaddrs(
-    self, testcases: IPInterfacesTestCases
-) -> trt.CollectionTestResults:
+    self, testcases: IpInterfacesCheckCollection
+) -> trt.CheckResultsCollection:
     """
     Validate the wireless device configured IP addresses against those defined
     in the design.
@@ -102,21 +103,19 @@ async def meraki_wireless_tc_ipaddrs(
     results = list()
     if_names = list()
 
-    for test_case in testcases.tests:
+    for test_case in testcases.checks:
 
-        if_name = test_case.test_case_id()
+        if_name = test_case.check_id()
         if_names.append(if_name)
 
         if not (if_ip_data := map_msrd_ip_config.get(if_name)):
             results.append(
-                trt.FailNoExistsResult(
-                    device=device, test_case=test_case, field="if_ipaddr"
-                )
+                trt.CheckFailNoExists(device=device, check=test_case, field="if_ipaddr")
             )
             continue
 
         one_results = await _test_one_interface(
-            device=device, test_case=test_case, msrd_if_ipaddr=if_ip_data
+            device=device, check_type=test_case, msrd_if_ipaddr=if_ip_data
         )
 
         results.extend(one_results)
@@ -139,9 +138,9 @@ async def meraki_wireless_tc_ipaddrs(
 
 async def _test_one_interface(
     device: Device,
-    test_case: IPInterfaceTestCase,
+    test_case: IpInterfaceCheck,
     msrd_if_ipaddr: str,
-) -> trt.CollectionTestResults:
+) -> trt.CheckResultsCollection:
     """
     Validate one interface on the device against the test case defining the designed
     IP address.
@@ -157,9 +156,9 @@ async def _test_one_interface(
 
     if msrd_if_ipaddr != expd_if_ipaddr:
         results.append(
-            trt.FailFieldMismatchResult(
+            trt.CheckFailFieldMismatch(
                 device=device,
-                test_case=test_case,
+                check_type=test_case,
                 field="if_ipaddr",
                 measurement=msrd_if_ipaddr,
             )
@@ -167,8 +166,8 @@ async def _test_one_interface(
 
     if not any_failures(results):
         results.append(
-            trt.PassTestCase(
-                device=device, test_case=test_case, measurement=msrd_if_ipaddr
+            trt.CheckPassResult(
+                device=device, check_type=test_case, measurement=msrd_if_ipaddr
             )
         )
 
@@ -177,25 +176,23 @@ async def _test_one_interface(
 
 def _test_exclusive_list(
     device: Device, expd_if_names: Sequence[str], msrd_if_names: List[str]
-) -> trt.CollectionTestResults:
+) -> trt.CheckResultsCollection:
     """
     The previous per-interface checks for any missing; therefore we only need
     to check for any extra interfaces found on the device.
     """
 
-    tc = IPInterfaceExclusiveListTestCase()
+    tc = IpInterfaceCheckExclusiveList()
 
     if extras := set(msrd_if_names) - set(expd_if_names):
-        result = trt.FailExtraMembersResult(
+        result = trt.CheckFailExtraMembers(
             device=device,
-            test_case=tc,
+            check=tc,
             field="exclusive_list",
             expected=sorted(expd_if_names),
             extras=sorted(extras),
         )
     else:
-        result = trt.PassTestCase(
-            device=device, test_case=tc, measurement=msrd_if_names
-        )
+        result = trt.CheckPassResult(device=device, check=tc, measurement=msrd_if_names)
 
     return [result]
