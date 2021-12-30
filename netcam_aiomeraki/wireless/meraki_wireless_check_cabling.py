@@ -46,7 +46,7 @@ if TYPE_CHECKING:
 # Exports
 # -----------------------------------------------------------------------------
 
-__all__ = ["meraki_device_tc_cabling"]
+__all__ = ["meraki_wireless_check_cabling"]
 
 # -----------------------------------------------------------------------------
 #
@@ -55,8 +55,8 @@ __all__ = ["meraki_device_tc_cabling"]
 # -----------------------------------------------------------------------------
 
 
-async def meraki_device_tc_cabling(
-    self, testcases: InterfaceCablingCheckCollection
+async def meraki_wireless_check_cabling(
+    self, check_collection: InterfaceCablingCheckCollection
 ) -> Optional[trt.CheckResultsCollection]:
     """
     Validate the cabling neighborship data (LLDP/CDP) of the device against the
@@ -79,23 +79,23 @@ async def meraki_device_tc_cabling(
         port_name: port_data for port_name, port_data in api_data["ports"].items()
     }
 
-    for test_case in testcases.checks:
-        if_name = test_case.check_id()
+    for check in check_collection.checks:
+        if_name = check.check_id()
 
         if not (msrd_ifnei := map_msrd_port_nei.get(if_name)):
-            results.append(trt.CheckFailNoExists(device=device, check=test_case))
+            results.append(trt.CheckFailNoExists(device=device, check=check))
             continue
 
         results.extend(
-            test_one_interface(dut=dut, check_type=test_case, measurement=msrd_ifnei)
+            _check_one_interface(dut=dut, check=check, measurement=msrd_ifnei)
         )
 
     return results
 
 
-def test_one_interface(
+def _check_one_interface(
     dut: "MerakiWirelessDeviceUnderTest",
-    test_case: InterfaceCablingCheck,
+    check: InterfaceCablingCheck,
     measurement: dict,
 ) -> trt.CheckResultsCollection:
     """
@@ -103,16 +103,14 @@ def test_one_interface(
     """
     results = list()
     device = dut.device
-    expd_nei = test_case.expected_results
+    expd_nei = check.expected_results
 
     # for now only checking the LLDP status; not checking CDP.
     # TODO: possibly support CDP if/when necessary
 
     if not (msrd_nei := measurement.get("lldp")):
         results.append(
-            trt.CheckFailNoExists(
-                device=device, check_type=test_case, measurement=measurement
-            )
+            trt.CheckFailNoExists(device=device, check=check, measurement=measurement)
         )
         return results
 
@@ -125,7 +123,7 @@ def test_one_interface(
         results.append(
             trt.CheckFailFieldMismatch(
                 device=device,
-                check_type=test_case,
+                check=check,
                 field="device",
                 measurement=msrd_name,
             )
@@ -135,7 +133,7 @@ def test_one_interface(
         results.append(
             trt.CheckFailFieldMismatch(
                 device=device,
-                check_type=test_case,
+                check=check,
                 field="port_id",
                 measurement=msrd_port_id,
             )
@@ -143,9 +141,7 @@ def test_one_interface(
 
     if not any_failures(results):
         results.append(
-            trt.CheckPassResult(
-                device=device, check_type=test_case, measurement=measurement
-            )
+            trt.CheckPassResult(device=device, check=check, measurement=measurement)
         )
 
     return results

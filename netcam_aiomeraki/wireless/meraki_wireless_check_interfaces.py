@@ -40,7 +40,7 @@ if TYPE_CHECKING:
 # Exports
 # -----------------------------------------------------------------------------
 
-__all__ = ["meraki_wireless_tc_interfaces"]
+__all__ = ["meraki_wireless_check_interfaces"]
 
 # -----------------------------------------------------------------------------
 #
@@ -49,8 +49,8 @@ __all__ = ["meraki_wireless_tc_interfaces"]
 # -----------------------------------------------------------------------------
 
 
-async def meraki_wireless_tc_interfaces(
-    dut, testcases: InterfaceCheckCollection
+async def meraki_wireless_check_interfaces(
+    dut, check_collection: InterfaceCheckCollection
 ) -> Optional[tr.CheckResultsCollection]:
     """
     Validate the wireless device interfaces against the design.
@@ -82,12 +82,12 @@ async def meraki_wireless_tc_interfaces(
     map_port_status["wan1"] = True
     results = list()
 
-    for test_case in testcases.checks:
-        if_name = test_case.check_id()
+    for check in check_collection.checks:
+        if_name = check.check_id()
 
         # if the expected interface does not exist then report the error
         if not (msrd_status := map_port_status.get(if_name)):
-            results.append(tr.CheckFailNoExists(device=device, check=test_case))
+            results.append(tr.CheckFailNoExists(device=device, check=check))
             continue
 
         # not checking the status of wan1 since it is always there.  The IP
@@ -97,11 +97,11 @@ async def meraki_wireless_tc_interfaces(
             continue
 
         msrd_used = msrd_status is True
-        if msrd_used != test_case.expected_results.used:
+        if msrd_used != check.expected_results.used:
             results.append(
                 tr.CheckFailFieldMismatch(
                     device=device,
-                    check=test_case,
+                    check=check,
                     field="used",
                     measurement=msrd_used,
                 )
@@ -109,7 +109,7 @@ async def meraki_wireless_tc_interfaces(
             continue
 
         results.append(
-            tr.CheckPassResult(device=device, check=test_case, measurement=msrd_status)
+            tr.CheckPassResult(device=device, check=check, measurement=msrd_status)
         )
 
     # return all testing results

@@ -71,9 +71,9 @@ class MerakiWirelessDeviceUnderTest(MerakiDeviceUnderTest):
     # Support the 'cabling' testcases
     # -------------------------------------------------------------------------
 
-    from .meraki_wireless_tc_cabling import meraki_device_tc_cabling
+    from .meraki_wireless_check_cabling import meraki_wireless_check_cabling
 
-    execute_checks.register(meraki_device_tc_cabling)
+    execute_checks.register(meraki_wireless_check_cabling)
 
     # -------------------------------------------------------------------------
     # Support the 'ipaddrs' testcases
@@ -87,9 +87,9 @@ class MerakiWirelessDeviceUnderTest(MerakiDeviceUnderTest):
     # Support the 'interfaces' testcases
     # -------------------------------------------------------------------------
 
-    from .meraki_wireless_tc_interfaces import meraki_wireless_tc_interfaces
+    from .meraki_wireless_check_interfaces import meraki_wireless_check_interfaces
 
-    execute_checks.register(meraki_wireless_tc_interfaces)
+    execute_checks.register(meraki_wireless_check_interfaces)
 
     # -------------------------------------------------------------------------
     # Support the 'switchports' testcases
