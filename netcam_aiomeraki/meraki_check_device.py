@@ -22,8 +22,9 @@ from typing import TYPE_CHECKING
 # Public Impors
 # -----------------------------------------------------------------------------
 
-from netcad.topology.tc_device_info import DeviceInformationTestCases
-from netcad.netcam import tc_result_types as trt, any_failures
+from netcad.topology.check_device_info import DeviceInformationCheckCollection
+from netcad.netcam import any_failures
+from netcad.checks import check_result_types as trt
 
 # -----------------------------------------------------------------------------
 # Private Improts
@@ -36,7 +37,7 @@ if TYPE_CHECKING:
 # Exports
 # -----------------------------------------------------------------------------
 
-__all__ = ["meraki_tc_device_info"]
+__all__ = ["meraki_check_device_info"]
 
 # -----------------------------------------------------------------------------
 #
@@ -45,15 +46,30 @@ __all__ = ["meraki_tc_device_info"]
 # -----------------------------------------------------------------------------
 
 
-async def meraki_tc_device_info(
-    self, testcases: DeviceInformationTestCases
-) -> trt.CollectionTestResults:
+async def meraki_check_device_info(
+    self, testcases: DeviceInformationCheckCollection
+) -> trt.CheckResultsCollection:
+    """
+    The testcase execute for the "device" testcase.  This function is used to
+    validate the expected product model.
 
+    Parameters
+    ----------
+    self: MerakiDeviceUnderTest
+        The DUT instance
+
+    testcases:
+        The DeviceInformation set of testcases.
+
+    Returns
+    -------
+    List of test-case results that are processed by the netcam infrastructure.
+    """
     dut: MerakiDeviceUnderTest = self
     device = dut.device
 
     results = list()
-    testcase = testcases.tests[0]
+    testcase = testcases.checks[0]
     exp_values = testcase.expected_results
 
     # check for matching product model.
@@ -63,18 +79,32 @@ async def meraki_tc_device_info(
 
     if msrd_product_model != expd_product_model:
         results.append(
-            trt.FailFieldMismatchResult(
+            trt.CheckFailFieldMismatch(
                 device=device,
-                test_case=testcase,
+                check=testcase,
                 field="product_model",
                 measurement=msrd_product_model,
             )
         )
 
+    # add an information result to capture the state of the device data.
+
+    results.append(
+        trt.CheckInfoLog(
+            device=device,
+            check=testcase,
+            field="device_info",
+            measurement=self.meraki_device,
+        )
+    )
+
     if not any_failures(results):
         results.append(
-            trt.PassTestCase(
-                device=device, test_case=testcase, measurement=exp_values.dict()
+            trt.CheckPassResult(
+                device=device,
+                check=testcase,
+                field="product_model",
+                measurement=msrd_product_model,
             )
         )
 

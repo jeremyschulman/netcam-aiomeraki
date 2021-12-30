@@ -12,23 +12,6 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-# example = {'portId': '10',
-#            'name': None,
-#            'tags': [],
-#            'enabled': True,
-#            'poeEnabled': False,
-#            'type': 'trunk',
-#            'vlan': 5,
-#            'voiceVlan': None,
-#            'allowedVlans': 'all',
-#            'isolationEnabled': False,
-#            'rstpEnabled': True,
-#            'stpGuard': 'loop guard',
-#            'linkNegotiation': '1 Gigabit full duplex (forced)',
-#            'portScheduleId': None,
-#            'udld': 'Alert only',
-#            'accessPolicyType': 'Open'}
-
 # -----------------------------------------------------------------------------
 # System Imports
 # -----------------------------------------------------------------------------
@@ -39,10 +22,12 @@ from typing import TYPE_CHECKING
 # Public Imports
 # -----------------------------------------------------------------------------
 
-from netcad.netcam import tc_result_types as tr
+from netcad.netcam import any_failures
+from netcad.checks import check_result_types as tr
+from netcad.helpers import parse_istrange
 
-from netcad.vlan.tc_switchports import (
-    SwitchportTestCases,
+from netcad.vlan.check_switchports import (
+    SwitchportCheckCollection,
     SwitchportAccessExpectation,
     SwitchportTrunkExpectation,
 )
@@ -52,16 +37,14 @@ from netcad.vlan.tc_switchports import (
 # -----------------------------------------------------------------------------
 
 if TYPE_CHECKING:
-    from .meraki_ms_dut import MerakiSwitchDeviceUnderTest
+    from .meraki_appliance_dut import MerakiApplianceDeviceUnderTest
 
-from netcam_aiomeraki.tc_helpers import add_pass_if_nofail
-from netcad.helpers import range_string
 
 # -----------------------------------------------------------------------------
 # Exports
 # -----------------------------------------------------------------------------
 
-__all__ = ["meraki_ms_tc_switchports"]
+__all__ = ["meraki_appliance_check_switchports"]
 
 # -----------------------------------------------------------------------------
 #
@@ -70,27 +53,33 @@ __all__ = ["meraki_ms_tc_switchports"]
 # -----------------------------------------------------------------------------
 
 
-async def meraki_ms_tc_switchports(
-    self, testcases: SwitchportTestCases
-) -> tr.CollectionTestResults:
-
-    dut: MerakiSwitchDeviceUnderTest = self
+async def meraki_appliance_check_switchports(
+    self, check_collection: SwitchportCheckCollection
+) -> tr.CheckResultsCollection:
+    """
+    Validate the device VLAN to interface usage against the design expectations.
+    """
+    dut: MerakiApplianceDeviceUnderTest = self
     device = dut.device
-    ports_config = await dut.get_port_config()
-    map_ports_config = {rec["portId"]: rec for rec in ports_config}
+
+    # The MX port data stores the port number as an int; need to convert to str
+    # to conform with test case id value.
+
+    api_data = await dut.get_switchports()
+    map_msrd_ports_lldpnei = {str(rec["number"]): rec for rec in api_data}
 
     results = list()
 
-    for test_case in testcases.tests:
-        expd_status = test_case.expected_results
+    for check in check_collection.checks:
+        expd_status = check.expected_results
 
-        if_name = test_case.test_case_id()
+        if_name = check.check_id()
 
         # if the interface from the design does not exist on the device, then
         # report this error and go to next test-case.
 
-        if not (msrd_port := map_ports_config.get(if_name)):
-            results.append(tr.FailNoExistsResult(device=device, test_case=test_case))
+        if not (msrd_port := map_msrd_ports_lldpnei.get(if_name)):
+            results.append(tr.CheckFailNoExists(device=device, check=check))
             continue
 
         # check the switchport mode value.  If they do not match, then we report
@@ -101,9 +90,9 @@ async def meraki_ms_tc_switchports(
 
         if expd_mode != msrd_mode:
             results.append(
-                tr.FailFieldMismatchResult(
+                tr.CheckFailFieldMismatch(
                     device=device,
-                    test_case=test_case,
+                    check=check,
                     field="switchport_mode",
                     measurement=msrd_mode,
                 )
@@ -115,21 +104,20 @@ async def meraki_ms_tc_switchports(
             "trunk": _check_trunk_switchport,
         }.get(expd_mode)
 
-        results.extend(
-            add_pass_if_nofail(
-                device,
-                test_case,
-                measurement=msrd_port,
-                results=mode_handler(dut, test_case, expd_status, msrd_port),
+        mode_results = mode_handler(dut, check, expd_status, msrd_port)
+        results.extend(mode_results)
+
+        if not any_failures(mode_results):
+            results.append(
+                tr.CheckPassResult(device=device, check=check, measurement=msrd_port)
             )
-        )
 
     return results
 
 
 def _check_access_switchport(
     dut, test_case, expd_status: SwitchportAccessExpectation, msrd_status: dict
-) -> tr.CollectionTestResults:
+) -> tr.CheckResultsCollection:
     """
     Only one check for now, that is to validate that the configured VLAN on the
     access port matches the test case.
@@ -140,9 +128,9 @@ def _check_access_switchport(
 
     if vl_id and (msrd_vl_id := msrd_status["vlan"]) != vl_id:
         results.append(
-            tr.FailFieldMismatchResult(
+            tr.CheckFailFieldMismatch(
                 device=device,
-                test_case=test_case,
+                check=test_case,
                 field="vlan",
                 expected=vl_id,
                 measurement=msrd_vl_id,
@@ -154,50 +142,51 @@ def _check_access_switchport(
 
 def _check_trunk_switchport(
     dut, test_case, expd_status: SwitchportTrunkExpectation, msrd_status: dict
-) -> tr.CollectionTestResults:
-
+) -> tr.CheckResultsCollection:
+    """
+    Validate the state of one TRUNK port against the design expectations.
+    """
     device = dut.device
     results = list()
 
     # if there is a native vlan expected, then validate the match.
 
-    n_vl_id = expd_status.native_vlan.vlan_id if expd_status.native_vlan else None
-    if n_vl_id and (msrd_vl_id := msrd_status["vlan"]) != n_vl_id:
-        results.append(
-            tr.FailFieldMismatchResult(
-                device=device,
-                test_case=test_case,
-                field="native_vlan",
-                expected=n_vl_id,
-                measurement=msrd_vl_id,
+    if msrd_status.get("dropUntaggedTraffic", False) is True:
+        # then not checking the native vlan.
+        pass
+    else:
+        n_vl_id = expd_status.native_vlan.vlan_id if expd_status.native_vlan else None
+        if n_vl_id and (msrd_vl_id := msrd_status["vlan"]) != n_vl_id:
+            results.append(
+                tr.CheckFailFieldMismatch(
+                    device=device,
+                    check=test_case,
+                    field="native_vlan",
+                    expected=n_vl_id,
+                    measurement=msrd_vl_id,
+                )
             )
-        )
-
-    # the trunk is either "all" or a CSV of vlans
 
     msrd_allowd_vlans = msrd_status["allowedVlans"]
-
-    # if all, then done checking; really should not be using "all", so
-    # TODO: add INFO report that all is being used.
-    if msrd_allowd_vlans != "all":
+    if msrd_allowd_vlans == "all":
         return results
 
-    e_tr_allowed_vids = sorted(
-        [vlan.vlan_id for vlan in expd_status.trunk_allowed_vlans]
-    )
+    # need to process the vlan list. Meraki provides this as a CSV we need to
+    # create a CSV from the expected vlans. Then convert the list of vlan-ids to
+    # a range string for string comparison purposes.
 
-    # conver the list of vlan-ids to a range string for string comparison
-    # purposes.
+    expd_set = {vlan.vlan_id for vlan in expd_status.trunk_allowed_vlans}
 
-    e_tr_alwd_vstr = range_string(e_tr_allowed_vids)
-    if e_tr_alwd_vstr != msrd_allowd_vlans:
+    msrd_set = parse_istrange(msrd_allowd_vlans)
+
+    if expd_set != msrd_set:
         results.append(
-            tr.FailFieldMismatchResult(
+            tr.CheckFailFieldMismatch(
                 device=device,
-                test_case=test_case,
+                check=test_case,
                 field="trunk_allowed_vlans",
-                expected=e_tr_alwd_vstr,
-                measurement=msrd_allowd_vlans,
+                expected=sorted(expd_set),
+                measurement=sorted(msrd_set),
             )
         )
 

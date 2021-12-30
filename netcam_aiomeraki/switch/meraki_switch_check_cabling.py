@@ -24,30 +24,31 @@ from typing import TYPE_CHECKING
 
 from macaddr import MacAddress
 
-from netcad.topology.tc_cabling_nei import (
-    InterfaceCablingTestCases,
-    InterfaceCablingTestCase,
+from netcad.topology.check_cabling_nei import (
+    InterfaceCablingCheckCollection,
+    InterfaceCablingCheck,
 )
 from netcad.topology.utils_cabling_nei import (
     nei_interface_match,
     nei_hostname_match,
 )
 
-from netcad.netcam import any_failures, tc_result_types as trt
+from netcad.netcam import any_failures
+from netcad.checks import check_result_types as trt
 
 # -----------------------------------------------------------------------------
 # Private Imports
 # -----------------------------------------------------------------------------
 
 if TYPE_CHECKING:
-    from .meraki_ms_dut import MerakiSwitchDeviceUnderTest
+    from .meraki_switch_dut import MerakiSwitchDeviceUnderTest
 
 
 # -----------------------------------------------------------------------------
 # Exports
 # -----------------------------------------------------------------------------
 
-__all__ = ["meraki_ms_tc_cabling"]
+__all__ = ["meraki_switch_check_cabling"]
 
 # -----------------------------------------------------------------------------
 #
@@ -56,10 +57,13 @@ __all__ = ["meraki_ms_tc_cabling"]
 # -----------------------------------------------------------------------------
 
 
-async def meraki_ms_tc_cabling(
-    self, testcases: InterfaceCablingTestCases
-) -> trt.CollectionTestResults:
-
+async def meraki_switch_check_cabling(
+    self, check_collection: InterfaceCablingCheckCollection
+) -> trt.CheckResultsCollection:
+    """
+    Validate the state of the switch LLDP/CDP neighbor information against the
+    expected cabling topology in the design.
+    """
     dut: MerakiSwitchDeviceUnderTest = self
     device = dut.device
 
@@ -69,32 +73,32 @@ async def meraki_ms_tc_cabling(
 
     results = list()
 
-    for test_case in testcases.tests:
-        if_name = test_case.test_case_id()
+    for check in check_collection.checks:
+        if_name = check.check_id()
 
         if not (msrd_nei_status := map_msrd_ports_status.get(if_name)):
-            results.append(trt.FailNoExistsResult(device=device, test_case=test_case))
+            results.append(trt.CheckFailNoExists(device=device, check=check))
             continue
 
         if msrd_lldp_nei := msrd_nei_status.get("lldp"):
             results.extend(
-                _test_one_lldp_interface(
-                    device=device, test_case=test_case, msrd_lldp_nei=msrd_lldp_nei
+                _check_one_lldp_interface(
+                    dut=dut, check=check, msrd_lldp_nei=msrd_lldp_nei
                 )
             )
         elif msrd_cdp_nei := msrd_nei_status.get("cdp"):
-            nei_res = await _test_one_cdp_interface(
-                dut=dut, test_case=test_case, msrd_cdp_nei=msrd_cdp_nei
+            nei_res = await _check_one_cdp_interface(
+                dut=dut, check=check, msrd_cdp_nei=msrd_cdp_nei
             )
             results.extend(nei_res)
         else:
             results.append(
-                trt.FailNoExistsResult(
+                trt.CheckFailNoExists(
                     device=device,
-                    test_case=test_case,
+                    check=check,
                     error=dict(
                         message="Unexpcted API payload missing cdp|lldp",
-                        expected=test_case.expected_results.dict(),
+                        expected=check.expected_results.dict(),
                     ),
                 )
             )
@@ -109,11 +113,20 @@ async def meraki_ms_tc_cabling(
 # -----------------------------------------------------------------------------
 
 
-async def _test_one_cdp_interface(
+async def _check_one_cdp_interface(
     dut: "MerakiSwitchDeviceUnderTest",
-    test_case: InterfaceCablingTestCase,
+    check: InterfaceCablingCheck,
     msrd_cdp_nei: dict,
-) -> trt.CollectionTestResults:
+) -> trt.CheckResultsCollection:
+    """
+    Validate a single interface if the only neighborship data available is CDP.
+    This should not be the case, as LLDP is expected everywhere; and this function
+    is not completed finished.
+
+    Raises
+    ------
+    NotImplementedError
+    """
 
     # results = list()
     device = dut.device
@@ -124,12 +137,12 @@ async def _test_one_cdp_interface(
 
     if "Meraki" not in (msrd_platform := (msrd_cdp_nei.get("platform", ""))):
         return [
-            trt.FailNoExistsResult(
+            trt.CheckFailNoExists(
                 device=device,
-                test_case=test_case,
+                check=check,
                 error=dict(
                     message=f'CDP platform is not Meraki as expected: "{msrd_platform}"',
-                    expected=test_case.expected_results.dict(),
+                    expected=check.expected_results.dict(),
                 ),
             )
         ]
@@ -141,12 +154,12 @@ async def _test_one_cdp_interface(
 
     except ValueError:
         return [
-            trt.FailNoExistsResult(
+            trt.CheckFailNoExists(
                 device=device,
-                test_case=test_case,
+                check=check,
                 error=dict(
                     message=f'CDP device ID not MAC as expected: "{cdp_device_id}"',
-                    expected=test_case.expected_results.dict(),
+                    expected=check.expected_results.dict(),
                 ),
             )
         ]
@@ -162,32 +175,30 @@ async def _test_one_cdp_interface(
     raise NotImplementedError("Meraki Switch CDP cabling check")
 
 
-def meraki_hostname_match(expected, measured: str):
-    if not measured.startswith("Meraki"):
-        return False
-
-    return expected == measured.split()[-1]
-
-
-def _test_one_lldp_interface(
-    device, test_case: InterfaceCablingTestCase, msrd_lldp_nei: dict
-) -> trt.CollectionTestResults:
+def _check_one_lldp_interface(
+    dut: "MerakiSwitchDeviceUnderTest",
+    check: InterfaceCablingCheck,
+    msrd_lldp_nei: dict,
+) -> trt.CheckResultsCollection:
+    """
+    Validate one interface cabling information using the reported LLDP data.
+    """
     results = list()
-
-    expd_nei = test_case.expected_results
+    device = dut.device
+    expd_nei = check.expected_results
 
     msrd_name = msrd_lldp_nei["systemName"]
     msrd_port_id = msrd_lldp_nei["portId"]
 
     # ensure the expected hostname matches
 
-    if not nei_hostname_match(expd_nei.device, msrd_name) and not meraki_hostname_match(
+    if not nei_hostname_match(
         expd_nei.device, msrd_name
-    ):
+    ) and not dut.meraki_hostname_match(expd_nei.device, msrd_name):
         results.append(
-            trt.FailFieldMismatchResult(
+            trt.CheckFailFieldMismatch(
                 device=device,
-                test_case=test_case,
+                check=check,
                 field="device",
                 measurement=msrd_name,
             )
@@ -197,9 +208,9 @@ def _test_one_lldp_interface(
 
     if not nei_interface_match(expd_nei.port_id, msrd_port_id):
         results.append(
-            trt.FailFieldMismatchResult(
+            trt.CheckFailFieldMismatch(
                 device=device,
-                test_case=test_case,
+                check=check,
                 field="port_id",
                 measurement=msrd_port_id,
             )
@@ -209,9 +220,7 @@ def _test_one_lldp_interface(
 
     if not any_failures(results):
         results.append(
-            trt.PassTestCase(
-                device=device, test_case=test_case, measurement=msrd_lldp_nei
-            )
+            trt.CheckPassResult(device=device, check=check, measurement=msrd_lldp_nei)
         )
 
     return results

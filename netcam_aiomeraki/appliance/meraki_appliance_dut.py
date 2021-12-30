@@ -37,8 +37,8 @@ from functools import singledispatchmethod
 
 from netcam_aiomeraki.meraki_dut import (
     MerakiDeviceUnderTest,
-    TestCases,
-    CollectionTestResults,
+    CheckCollection,
+    CheckResultsCollection,
 )
 
 # -----------------------------------------------------------------------------
@@ -55,6 +55,9 @@ __all__ = ["MerakiApplianceDeviceUnderTest"]
 
 
 class MerakiApplianceDeviceUnderTest(MerakiDeviceUnderTest):
+    """
+    Meraki DUT sub-class for "appliance" devices such as the MX product line.
+    """
 
     # -------------------------------------------------------------------------
     #
@@ -62,14 +65,15 @@ class MerakiApplianceDeviceUnderTest(MerakiDeviceUnderTest):
     #
     # -------------------------------------------------------------------------
 
-    async def get_lldp_status(self):
-        return await self.api_cache_get(
-            key="lldp_status",
-            call="devices.getDeviceLldpCdp",
-            serial=self.serial,
-        )
+    # async def get_lldp_stqqatus(self):
+    #     return await self.api_cache_get(
+    #         key="lldp_status",
+    #         call="devices.getDeviceLldpCdp",
+    #         serial=self.serial,
+    #     )
 
     async def get_switchports(self):
+        """Get the appliance switchport configuration"""
         return await self.api_cache_get(
             key="switchports",
             call="appliance.getNetworkAppliancePorts",
@@ -77,6 +81,7 @@ class MerakiApplianceDeviceUnderTest(MerakiDeviceUnderTest):
         )
 
     async def get_vlans(self):
+        """Get the appliance vlan configuraiton"""
         return await self.api_cache_get(
             key="vlans",
             call="appliance.getNetworkApplianceVlans",
@@ -90,10 +95,15 @@ class MerakiApplianceDeviceUnderTest(MerakiDeviceUnderTest):
     # -------------------------------------------------------------------------
 
     @singledispatchmethod
-    async def execute_testcases(
-        self, testcases: TestCases
-    ) -> Optional["CollectionTestResults"]:
-        return await super().execute_testcases(testcases)
+    async def execute_checks(
+        self, testcases: CheckCollection
+    ) -> Optional["CheckResultsCollection"]:
+        """
+        Dispatch hook for testcase executor registration in this sub-class. If
+        this method is reached it means that this DUT does not implement the
+        specific testcases and the super-class is tried.
+        """
+        return await super().execute_checks(testcases)
 
     # -------------------------------------------------------------------------
     #
@@ -105,38 +115,38 @@ class MerakiApplianceDeviceUnderTest(MerakiDeviceUnderTest):
     # Support the 'cabling' testcases
     # -------------------------------------------------------------------------
 
-    from .meraki_appliance_tc_cabling import meraki_device_tc_cabling
+    from .meraki_appliance_check_cabling import meraki_device_tc_cabling
 
-    execute_testcases.register(meraki_device_tc_cabling)
+    execute_checks.register(meraki_device_tc_cabling)
 
     # -------------------------------------------------------------------------
     # Support the 'interfaces' testcases
     # -------------------------------------------------------------------------
 
-    from .meraki_appliance_tc_interfaces import meraki_appliance_tc_interfaces
+    from .meraki_appliance_check_interfaces import meraki_appliance_check_interfaces
 
-    execute_testcases.register(meraki_appliance_tc_interfaces)
+    execute_checks.register(meraki_appliance_check_interfaces)
 
     # -------------------------------------------------------------------------
     # Support the 'ipaddrs' testcases
     # -------------------------------------------------------------------------
 
-    from .meraki_appliance_tc_ipaddrs import meraki_mx_tc_ipaddrs
+    from .meraki_appliance_check_ipaddrs import meraki_appliance_check_ipaddrs
 
-    execute_testcases.register(meraki_mx_tc_ipaddrs)
+    execute_checks.register(meraki_appliance_check_ipaddrs)
 
     # -------------------------------------------------------------------------
     # Support the 'switchports' testcases
     # -------------------------------------------------------------------------
 
-    from .meraki_appliance_tc_switchports import meraki_appliance_tc_switchports
+    from .meraki_appliance_check_switchports import meraki_appliance_check_switchports
 
-    execute_testcases.register(meraki_appliance_tc_switchports)
+    execute_checks.register(meraki_appliance_check_switchports)
 
     # -------------------------------------------------------------------------
     # Support the 'vlans' testcases
     # -------------------------------------------------------------------------
 
-    from .merkai_appliance_tc_vlans import meraki_mx_tc_vlans
+    from .merkai_appliance_check_vlans import meraki_appliance_check_vlans
 
-    execute_testcases.register(meraki_mx_tc_vlans)
+    execute_checks.register(meraki_appliance_check_vlans)

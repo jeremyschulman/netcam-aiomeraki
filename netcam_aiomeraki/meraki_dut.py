@@ -28,8 +28,8 @@ from http import HTTPStatus
 
 from netcad.logger import get_logger
 from netcad.netcam.dut import AsyncDeviceUnderTest
-from netcad.netcam import CollectionTestResults
-from netcad.testing_services import TestCases
+from netcad.netcam import CheckResultsCollection
+from netcad.checks import CheckCollection
 
 from meraki.aio import AsyncDashboardAPI, AsyncAPIError
 
@@ -45,7 +45,7 @@ from tenacity import (
 # Exports
 # -----------------------------------------------------------------------------
 
-__all__ = ["MerakiDeviceUnderTest", "TestCases", "CollectionTestResults"]
+__all__ = ["MerakiDeviceUnderTest", "CheckCollection", "CheckResultsCollection"]
 
 AsyncAPIErrorLike = TypeVar("AsyncAPIErrorLike", AsyncAPIError, BaseException)
 
@@ -57,7 +57,49 @@ AsyncAPIErrorLike = TypeVar("AsyncAPIErrorLike", AsyncAPIError, BaseException)
 
 
 class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
+    """
+    Base-class for all specific Meraki DUT subclasses.  This base-class provides a
+    nuber of commonly used features and API related access methods.
+
+    Notes
+    -----
+    The User is currently required to export the enviornment variable(s):
+
+        * MERAKI_ORGID:
+            The Meraki Dashboard API orgId value for which this device should be
+            located.
+
+    Attributes
+    ----------
+    model: str
+        The device model, as reported from the Merkai API
+
+    serial: str
+        The device serial-number, as reported from the Meraki API
+
+    network_id: str
+        The Meraki API networkId value for which this device is associated, as
+        obtained via the Meraki API.
+
+    meraki_orgid: str
+        The Meraki API orgId for which this device is located, as assigned
+        via the User environment.
+
+    meraki_device: dict
+        The device Meraki API payload about the device, as retrieved during
+        the testing setup process.
+
+    meraki_device_reachable: bool
+        During the setup process the DUT validates device reachabilty as
+        determined by using a "ping-check" API.  This value is set to True when
+        the device responds that it is reachable, False otherwse.
+    """
+
     def __init__(self, **kwargs):
+        """
+        Creates a new Meraki DUT instanced.  kwargs are not used and passed to
+        super-class asis.
+        """
         super().__init__(**kwargs)
 
         # create a functional partial that is used to create a new instnace of
@@ -92,14 +134,17 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
 
     @cached_property
     def model(self):
+        """The device model as discovered during setup"""
         return self.meraki_device["model"]
 
     @cached_property
     def serial(self):
+        """The device serial-number as discovered during setup"""
         return self.meraki_device["serial"]
 
     @cached_property
     def network_id(self):
+        """The device Meraki API networkId as discovered during setup"""
         return self.meraki_device["networkId"]
 
     # -------------------------------------------------------------------------
@@ -109,27 +154,88 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
     # -------------------------------------------------------------------------
 
     @staticmethod
-    def meraki_hostname_match(expected, measured: str):
+    def meraki_hostname_match(expected, measured: str) -> bool:
+        """
+        This function is a "helper" used duirng the cabling tests.  The Meraki
+        products report their LLDP system name as  "Meraki ... - <hostname>".
+        This function extracts the <hostname> portion for LLDP system-name
+        comparison purposes.
+
+        Returns
+        -------
+        True when the LLDP system-name matches, False otherwise.
+        """
         if not measured.startswith("Meraki"):
             return False
 
         return expected == measured.split()[-1]
 
     async def api_cache_get(self, key: str, call: str, **kwargs):
+        """
+        This function is used to cache responses from the Meraki API so that
+        when various testing executors that need the same data do not make
+        duplicate calls to the API.  This method is meant to be used by
+        high-abstraction methods that represent the data being obtained.  See
+        the "get_lldp" method, for exmaple.
+
+        Parameters
+        ----------
+        key: str
+            The unique cache-key, as used the by calling function.
+
+        call: str
+            The Meraki API call in dotted-notation that follows from the Merak
+            API instance.  For example, to call the get-lldp-cdp API, the call
+            value would be "devices.getDeviceLldpCdp"
+
+        Other Parameters
+        ----------------
+        kwargs: dict
+            API specific call parameters.  For example, the get-lldp-cdp API
+            requires the parameter "serial".  So the calling function would
+            provide that key-value in kwargs.
+
+        Returns
+        -------
+        The API payload as retrieved or previously cached.
+        """
+
+        # obtan the cache-lock to deal with mutual-exclusion in asyncio
+        # processing.
+
         async with self._api_cache_lock:
+
+            # if the value is not in the cache, then invoke the specific API
+            # method to perform the command.  Once retrieved store the value
+            # into the cache for subsequent use.
+
             if not (has_data := self._api_cache.get(key)):
                 async with self.meraki_api() as api:
                     meth = reduce(getattr, call.split("."), api)
                     has_data = await meth(**kwargs)
                     self._api_cache[key] = has_data
 
+            # return the API call results
             return has_data
 
     # -------------------------------------------------------------------------
     # Common Meraki Device API calls
     # -------------------------------------------------------------------------
 
-    async def get_lldp_status(self):
+    async def get_lldp_status(self) -> dict:
+        """
+        Execute the Meraki API to fetch the device LLDP/CDP information.  This
+        content is cached once retrieved.
+
+        Returns
+        -------
+        dict:
+            The Meraki API specific payload for the get-device-lldp-cdp API.
+
+        References
+        ----------
+        https://developer.cisco.com/meraki/api-v1/#!get-device-lldp-cdp
+        """
         return await self.api_cache_get(
             key="lldp_status",
             call="devices.getDeviceLldpCdp",
@@ -137,6 +243,20 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
         )
 
     async def get_mgmt_iface(self):
+        """
+        Execute the Merak API to fetch the device managment information.  This
+        content is cached once retrieved.
+
+        Returns
+        -------
+        dict:
+            The Meraki API specific payload for the
+            get-device-management-interface API.
+
+        References
+        ----------
+        https://developer.cisco.com/meraki/api-v1/#!get-device-management-interface
+        """
         return await self.api_cache_get(
             key="config_mgmt_iface",
             call="devices.getDeviceManagementInterface",
@@ -226,6 +346,8 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
         log = get_logger()
 
         def retry_on_429(retry_state: RetryCallState):
+            """tenacity handler for checking the return status of 429"""
+
             oc = retry_state.outcome
             if not oc.failed:
                 return False
@@ -239,7 +361,7 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
 
             if rt_exc.status == HTTPStatus.TOO_MANY_REQUESTS:
                 log.info(
-                    f"DUT: {self.device.name}: Still working on Meraki ping request ..."
+                    f"{self.device.name}: Still working on Meraki ping request ..."
                 )
                 return True
 
@@ -253,6 +375,7 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
             stop=stop_after_attempt(5),
         )
         async def _create_ping(_api):
+            """Create a ping-check job"""
             return await api.devices.createDeviceLiveToolsPingDevice(serial=self.serial)
 
         @retry(
@@ -261,6 +384,7 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
             stop=stop_after_attempt(5),
         )
         async def _check_ping(_api, _job):
+            """Check the status of a ping-check job"""
             return await api.devices.getDeviceLiveToolsPingDevice(
                 serial=self.serial, id=_job["pingId"]
             )
@@ -271,7 +395,7 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
 
             except (AsyncAPIError, RetryError):
                 log.error(
-                    f"DUT: {self.device.name}: Timeout starting Meraki ping check ... proceeding regardless"
+                    f"{self.device.name}: Timeout starting Meraki ping check ... proceeding regardless"
                 )
                 self.meraki_device_reachable = True
                 return ping_check
@@ -283,7 +407,7 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
                     ping_check = await _check_ping(api, ping_job)
                 except (AsyncAPIError, RetryError):
                     log.error(
-                        f"DUT: {self.device.name}: Timeout checking Meraki ping ... proceeding regardless"
+                        f"{self.device.name}: Timeout checking Meraki ping ... proceeding regardless"
                     )
                     self.meraki_device_reachable = True
                     return ping_check
@@ -300,7 +424,7 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
             "ready",
         )
         if not self.meraki_device_reachable:
-            log.error(f"DUT: {self.device.name}: Ping check failed, status: {p_st}")
+            log.error(f"{self.device.name}: Ping check failed, status: {p_st}")
 
         return ping_check
 
@@ -319,27 +443,45 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
 
         if not (dev := await self.get_inventory_device(name=self.device.name)):
             raise RuntimeError(
-                f"DUT: {self.device.name}: not found in Meraki Dashboard, check name in system"
+                f"{self.device.name}: not found in Meraki Dashboard, check name in system"
             )
 
         self.meraki_device = dev
 
-        log.info(f"DUT: {self.device.name}: Running Meraki connectivity ping check ...")
+        log.info(f"{self.device.name}: Running Meraki connectivity ping check ...")
 
         await self.ping_check()
         if not self.meraki_device_reachable:
             raise RuntimeError("Device fails reachability ping-check")
 
     @singledispatchmethod
-    async def execute_testcases(
-        self, testcases: TestCases
-    ) -> Optional["CollectionTestResults"]:
+    async def execute_checks(
+        self, testcases: CheckCollection
+    ) -> Optional["CheckResultsCollection"]:
+        """
+        This method is only called when the sub-classing DUT does not implement
+        a specific set of testcases; for example a DUT does not implement the
+        "transceivers" testcases because the Meraki API does not support it.
+
+        This function always returns None to indicates to the netcam infrasture
+        that the DUT does not support these testcases.  The netcam testing
+        infrastructure will process the None as a SKIP.
+
+        Parameters
+        ----------
+        testcases:
+            The specific testcases for DUT execution.
+
+        Returns
+        -------
+        None, always.
+        """
         return None
 
     # -------------------------------------------------------------------------
     # Support the 'device' testcases
     # -------------------------------------------------------------------------
 
-    from .meraki_tc_device import meraki_tc_device_info
+    from .meraki_check_device import meraki_check_device_info
 
-    execute_testcases.register(meraki_tc_device_info)
+    execute_checks.register(meraki_check_device_info)

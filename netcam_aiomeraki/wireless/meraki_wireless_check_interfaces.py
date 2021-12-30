@@ -23,10 +23,10 @@ from typing import TYPE_CHECKING
 # Public Imports
 # -----------------------------------------------------------------------------
 
-from netcad.netcam import tc_result_types as tr
+from netcad.checks import check_result_types as tr
 
-from netcad.topology.tc_interfaces import (
-    InterfaceTestCases,
+from netcad.topology.check_interfaces import (
+    InterfaceCheckCollection,
 )
 
 # -----------------------------------------------------------------------------
@@ -34,13 +34,13 @@ from netcad.topology.tc_interfaces import (
 # -----------------------------------------------------------------------------
 
 if TYPE_CHECKING:
-    from .meraki_appliance_dut import MerakiApplianceDeviceUnderTest
+    from .meraki_wireless_dut import MerakiWirelessDeviceUnderTest
 
 # -----------------------------------------------------------------------------
 # Exports
 # -----------------------------------------------------------------------------
 
-__all__ = ["meraki_appliance_tc_interfaces"]
+__all__ = ["meraki_wireless_check_interfaces"]
 
 # -----------------------------------------------------------------------------
 #
@@ -49,33 +49,59 @@ __all__ = ["meraki_appliance_tc_interfaces"]
 # -----------------------------------------------------------------------------
 
 
-async def meraki_appliance_tc_interfaces(
-    dut, testcases: InterfaceTestCases
-) -> Optional[tr.CollectionTestResults]:
-
-    dut: MerakiApplianceDeviceUnderTest
+async def meraki_wireless_check_interfaces(
+    dut, check_collection: InterfaceCheckCollection
+) -> Optional[tr.CheckResultsCollection]:
+    """
+    Validate the wireless device interfaces against the design.
+    """
+    dut: MerakiWirelessDeviceUnderTest
     device = dut.device
 
-    api_data = await dut.get_switchports()
-    map_port_status = {str(port_st["number"]): port_st for port_st in api_data}
+    # the only way to measure the operational status of the ethernet ports is
+    # to check the LLDP data. If the data is there, then the interface is up.
 
+    api_data = await dut.get_lldp_status()
+
+    def nei_data_exists(_on_port) -> bool:
+        """
+        Returns True if the interface is reporting any neighbor device either
+        via LLDP or CDP.
+        """
+        return bool(
+            _on_port.get("lldp", {}).get("systemName")
+            or _on_port.get("cdp", {}).get("deviceId")
+        )
+
+    map_port_status = {
+        port_name: True
+        for port_name, port_data in api_data["ports"].items()
+        if nei_data_exists(port_data)
+    }
+
+    map_port_status["wan1"] = True
     results = list()
 
-    for test_case in testcases.tests:
-        if_name = test_case.test_case_id()
+    for check in check_collection.checks:
+        if_name = check.check_id()
 
-        # TODO: for now, only going to check the ports 3+, and not the wan
-        #       (ports 1,2).  The SVI is checked via the ipaddrs test cases.
-
+        # if the expected interface does not exist then report the error
         if not (msrd_status := map_port_status.get(if_name)):
+            results.append(tr.CheckFailNoExists(device=device, check=check))
             continue
 
-        msrd_used = msrd_status["enabled"] is True
-        if msrd_used != test_case.expected_results.used:
+        # not checking the status of wan1 since it is always there.  The IP
+        # assignment would be checked by the 'ipaddrs' testcases.
+
+        if if_name == "wan1":
+            continue
+
+        msrd_used = msrd_status is True
+        if msrd_used != check.expected_results.used:
             results.append(
-                tr.FailFieldMismatchResult(
+                tr.CheckFailFieldMismatch(
                     device=device,
-                    test_case=test_case,
+                    check=check,
                     field="used",
                     measurement=msrd_used,
                 )
@@ -83,7 +109,7 @@ async def meraki_appliance_tc_interfaces(
             continue
 
         results.append(
-            tr.PassTestCase(device=device, test_case=test_case, measurement=msrd_status)
+            tr.CheckPassResult(device=device, check=check, measurement=msrd_status)
         )
 
     # return all testing results
