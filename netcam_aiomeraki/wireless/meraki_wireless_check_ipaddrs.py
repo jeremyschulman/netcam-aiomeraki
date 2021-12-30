@@ -58,7 +58,7 @@ if TYPE_CHECKING:
 # Exports
 # -----------------------------------------------------------------------------
 
-__all__ = ["meraki_wireless_tc_ipaddrs"]
+__all__ = ["meraki_wireless_check_ipaddrs"]
 
 
 # -----------------------------------------------------------------------------
@@ -68,8 +68,8 @@ __all__ = ["meraki_wireless_tc_ipaddrs"]
 # -----------------------------------------------------------------------------
 
 
-async def meraki_wireless_tc_ipaddrs(
-    self, testcases: IpInterfacesCheckCollection
+async def meraki_wireless_check_ipaddrs(
+    self, check_collection: IpInterfacesCheckCollection
 ) -> trt.CheckResultsCollection:
     """
     Validate the wireless device configured IP addresses against those defined
@@ -103,19 +103,19 @@ async def meraki_wireless_tc_ipaddrs(
     results = list()
     if_names = list()
 
-    for test_case in testcases.checks:
+    for check in check_collection.checks:
 
-        if_name = test_case.check_id()
+        if_name = check.check_id()
         if_names.append(if_name)
 
         if not (if_ip_data := map_msrd_ip_config.get(if_name)):
             results.append(
-                trt.CheckFailNoExists(device=device, check=test_case, field="if_ipaddr")
+                trt.CheckFailNoExists(device=device, check=check, field="if_ipaddr")
             )
             continue
 
-        one_results = await _test_one_interface(
-            device=device, check_type=test_case, msrd_if_ipaddr=if_ip_data
+        one_results = await _check_one_interface(
+            device=device, check=check, msrd_if_ipaddr=if_ip_data
         )
 
         results.extend(one_results)
@@ -136,9 +136,9 @@ async def meraki_wireless_tc_ipaddrs(
 # -----------------------------------------------------------------------------
 
 
-async def _test_one_interface(
+async def _check_one_interface(
     device: Device,
-    test_case: IpInterfaceCheck,
+    check: IpInterfaceCheck,
     msrd_if_ipaddr: str,
 ) -> trt.CheckResultsCollection:
     """
@@ -152,13 +152,13 @@ async def _test_one_interface(
     # Ensure the IP interface value matches.
     # -------------------------------------------------------------------------
 
-    expd_if_ipaddr = test_case.expected_results.if_ipaddr
+    expd_if_ipaddr = check.expected_results.if_ipaddr
 
     if msrd_if_ipaddr != expd_if_ipaddr:
         results.append(
             trt.CheckFailFieldMismatch(
                 device=device,
-                check_type=test_case,
+                check=check,
                 field="if_ipaddr",
                 measurement=msrd_if_ipaddr,
             )
@@ -166,9 +166,7 @@ async def _test_one_interface(
 
     if not any_failures(results):
         results.append(
-            trt.CheckPassResult(
-                device=device, check_type=test_case, measurement=msrd_if_ipaddr
-            )
+            trt.CheckPassResult(device=device, check=check, measurement=msrd_if_ipaddr)
         )
 
     return results
@@ -182,17 +180,19 @@ def _test_exclusive_list(
     to check for any extra interfaces found on the device.
     """
 
-    tc = IpInterfaceCheckExclusiveList()
+    check = IpInterfaceCheckExclusiveList()
 
     if extras := set(msrd_if_names) - set(expd_if_names):
         result = trt.CheckFailExtraMembers(
             device=device,
-            check=tc,
+            check=check,
             field="exclusive_list",
             expected=sorted(expd_if_names),
             extras=sorted(extras),
         )
     else:
-        result = trt.CheckPassResult(device=device, check=tc, measurement=msrd_if_names)
+        result = trt.CheckPassResult(
+            device=device, check=check, measurement=msrd_if_names
+        )
 
     return [result]
