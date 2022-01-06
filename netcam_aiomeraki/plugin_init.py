@@ -16,16 +16,23 @@ from typing import Optional, Dict, List
 
 
 class MerakiPluginGlobals:
+    """
+    Class used to store the global variables used by this plugin
+    """
+
     def __init__(self):
+        """init global variables on plugin init"""
         self.config: Optional[Dict] = None
         self.orgs: Optional[List[Dict]] = None
 
     @property
     def org_name(self):
+        """returns the Meraki Organizational Name"""
         return self.config.get("org_name")
 
     @property
     def org_id(self):
+        """returns the Meraki Organizational ID"""
         return self.config.get("org_id")
 
 

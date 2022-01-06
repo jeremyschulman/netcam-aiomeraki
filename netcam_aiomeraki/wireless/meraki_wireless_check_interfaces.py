@@ -62,6 +62,9 @@ async def meraki_wireless_check_interfaces(
     # to check the LLDP data. If the data is there, then the interface is up.
 
     api_data = await dut.get_lldp_status()
+    if not api_data:
+        message = "No LLDP/CDP data returned from API"
+        return [tr.CheckSkipResult(device=device, message=message)]
 
     def nei_data_exists(_on_port) -> bool:
         """
