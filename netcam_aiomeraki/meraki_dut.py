@@ -27,11 +27,9 @@ from http import HTTPStatus
 # -----------------------------------------------------------------------------
 
 from netcad.logger import get_logger
-from netcad.netcam.dut import AsyncDeviceUnderTest
+from netcad.netcam.dut import AsyncDeviceUnderTest, SetupError
 from netcad.netcam import CheckResultsCollection
 from netcad.checks import CheckCollection
-
-from meraki.aio import AsyncDashboardAPI, AsyncAPIError
 
 from tenacity import (
     retry,
@@ -45,6 +43,7 @@ from tenacity import (
 # Private Imports
 # -----------------------------------------------------------------------------
 
+from .meraki_aio import AsyncDashboardAPI, AsyncAPIError
 from .plugin_init import g_meraki
 
 # -----------------------------------------------------------------------------
@@ -483,7 +482,7 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
         await self.get_org_id()
 
         if not (dev := await self.get_inventory_device(name=self.device.name)):
-            raise RuntimeError(
+            raise SetupError(
                 f"{self.device.name}: not found in Meraki Dashboard, check name in system"
             )
 
@@ -493,7 +492,7 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
 
         await self.ping_check()
         if not self.meraki_device_reachable:
-            raise RuntimeError("Device fails reachability ping-check")
+            raise SetupError("Device fails reachability ping-check")
 
     @singledispatchmethod
     async def execute_checks(
