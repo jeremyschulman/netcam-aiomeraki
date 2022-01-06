@@ -20,24 +20,17 @@ import asyncio
 from typing import Optional, Dict, List, Union, TypeVar
 from os import environ
 from functools import partial, cached_property, singledispatchmethod, reduce
-from http import HTTPStatus
 
 # -----------------------------------------------------------------------------
 # Public Imports
 # -----------------------------------------------------------------------------
 
+from tenacity import RetryError
+
 from netcad.logger import get_logger
 from netcad.netcam.dut import AsyncDeviceUnderTest, SetupError
 from netcad.netcam import CheckResultsCollection
 from netcad.checks import CheckCollection
-
-from tenacity import (
-    retry,
-    wait_exponential,
-    stop_after_attempt,
-    RetryCallState,
-    RetryError,
-)
 
 # -----------------------------------------------------------------------------
 # Private Imports
@@ -383,53 +376,12 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
         ping_check = {"status": "timeout"}
         log = get_logger()
 
-        def retry_on_429(retry_state: RetryCallState):
-            """tenacity handler for checking the return status of 429"""
-
-            oc = retry_state.outcome
-            if not oc.failed:
-                return False
-
-            # if the exception is a 429, then we are going to backoff
-            # and try again.
-
-            rt_exc: AsyncAPIErrorLike = retry_state.outcome.exception()
-            if not hasattr(rt_exc, "status"):
-                return False
-
-            if rt_exc.status == HTTPStatus.TOO_MANY_REQUESTS:
-                log.info(
-                    f"{self.device.name}: Still working on Meraki ping request ..."
-                )
-                return True
-
-            # otherwise, we've tried hard enough and we should stop trying.
-            # this will result in a RetryError in the calling context.
-            return False
-
-        @retry(
-            retry=retry_on_429,
-            wait=wait_exponential(multiplier=1, min=4, max=10),
-            stop=stop_after_attempt(5),
-        )
-        async def _create_ping(_api):
-            """Create a ping-check job"""
-            return await api.devices.createDeviceLiveToolsPingDevice(serial=self.serial)
-
-        @retry(
-            retry=retry_on_429,
-            wait=wait_exponential(multiplier=1, min=4, max=10),
-            stop=stop_after_attempt(5),
-        )
-        async def _check_ping(_api, _job):
-            """Check the status of a ping-check job"""
-            return await api.devices.getDeviceLiveToolsPingDevice(
-                serial=self.serial, id=_job["pingId"]
-            )
-
         async with self.meraki_api() as api:
+
             try:
-                ping_job = await _create_ping(api)
+                ping_job = await api.devices.createDeviceLiveToolsPingDevice(
+                    serial=self.serial
+                )
 
             except (AsyncAPIError, RetryError):
                 log.error(
@@ -442,7 +394,10 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
                 await asyncio.sleep(1)
 
                 try:
-                    ping_check = await _check_ping(api, ping_job)
+                    ping_check = await api.devices.getDeviceLiveToolsPingDevice(
+                        serial=self.serial, id=ping_job["pingId"]
+                    )
+
                 except (AsyncAPIError, RetryError):
                     log.error(
                         f"{self.device.name}: Timeout checking Meraki ping ... proceeding regardless"
@@ -457,12 +412,10 @@ class MerakiDeviceUnderTest(AsyncDeviceUnderTest):
 
         # set the DUT attribute to indicate if the device is reachable.
 
-        self.meraki_device_reachable = (p_st := ping_check["status"]) in (
+        self.meraki_device_reachable = ping_check["status"] in (
             "complete",
             "ready",
         )
-        if not self.meraki_device_reachable:
-            log.error(f"{self.device.name}: Ping check failed, status: {p_st}")
 
         return ping_check
 

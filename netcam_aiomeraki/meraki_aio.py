@@ -72,6 +72,7 @@ def retry_on_429(retry_state: RetryCallState):
 
 
 def my_before_sleep(retry_state: RetryCallState):
+    """This function is used for debug purposes only"""
     sleep_sec = retry_state.next_action.sleep
     get_logger().debug(
         f"Still working on Meraki request. retry attempt {retry_state.attempt_number}, sleep: {sleep_sec}"
@@ -87,6 +88,14 @@ api_request_retry = retry(
 
 
 class AsyncDashboardAPI(_AsyncDashboardAPI):
+    """
+    Overload the Meraki provided asyncio client with a different mechanism to
+    handle HTTP 429 backoff.  Not sure if the Meraki client is working
+    correctly, or if I am just not using it correctly; but out of the box it
+    does not backoff as expected.
+    """
+
     def __init__(self, *vargs, **kwargs):
+        """overload init to wrap request handler for backoff"""
         super().__init__(*vargs, **kwargs)
         self._session.request = api_request_retry(self._session.request)
