@@ -26,7 +26,7 @@ from collections import defaultdict
 from netcad.device import Device
 from netcad.netcam import any_failures
 from netcad.checks import check_result_types as trt
-from netcad.vlan.check_vlans import (
+from netcad.vlans.checks.check_vlans import (
     VlanCheckCollection,
     VlanCheck,
     VlanCheckExclusiveList,

@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING
 # Public Impors
 # -----------------------------------------------------------------------------
 
-from netcad.topology.check_device_info import DeviceInformationCheckCollection
+from netcad.topology.checks.check_device_info import DeviceInformationCheckCollection
 from netcad.netcam import any_failures
 from netcad.checks import check_result_types as trt
 

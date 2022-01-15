@@ -36,7 +36,7 @@ from ipaddress import IPv4Interface
 # Public Imports
 # -----------------------------------------------------------------------------
 
-from netcad.topology.check_ipaddrs import (
+from netcad.topology.checks.check_ipaddrs import (
     IpInterfacesCheckCollection,
     IpInterfaceCheck,
     IpInterfaceCheckExclusiveList,

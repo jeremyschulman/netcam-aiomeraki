@@ -26,7 +26,7 @@ from typing import TYPE_CHECKING
 from netcad.netcam import any_failures
 from netcad.checks import check_result_types as tr
 
-from netcad.vlan.check_switchports import (
+from netcad.vlans.checks.check_switchports import (
     SwitchportCheckCollection,
     SwitchportAccessExpectation,
     SwitchportTrunkExpectation,

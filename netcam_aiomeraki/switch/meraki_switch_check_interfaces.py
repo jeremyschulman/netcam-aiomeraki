@@ -28,7 +28,7 @@ from netcad.device import Device
 from netcad.checks import check_result_types as tr
 from netcad.phy_port import PhyPortSpeeds
 
-from netcad.topology.check_interfaces import (
+from netcad.topology.checks.check_interfaces import (
     InterfaceCheckCollection,
     InterfaceCheck,
 )
