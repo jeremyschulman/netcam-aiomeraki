@@ -24,11 +24,11 @@ from typing import TYPE_CHECKING
 
 from macaddr import MacAddress
 
-from netcad.topology.check_cabling_nei import (
+from netcad.topology.checks.check_cabling_nei import (
     InterfaceCablingCheckCollection,
     InterfaceCablingCheck,
 )
-from netcad.topology.utils_cabling_nei import (
+from netcad.topology.checks.utils_cabling_nei import (
     nei_interface_match,
     nei_hostname_match,
 )

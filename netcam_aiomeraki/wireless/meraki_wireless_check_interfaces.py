@@ -25,7 +25,7 @@ from typing import TYPE_CHECKING
 
 from netcad.checks import check_result_types as tr
 
-from netcad.topology.check_interfaces import (
+from netcad.topology.checks.check_interfaces import (
     InterfaceCheckCollection,
 )
 

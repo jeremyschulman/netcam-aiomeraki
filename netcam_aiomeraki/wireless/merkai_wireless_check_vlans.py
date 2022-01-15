@@ -25,7 +25,7 @@ import asyncio
 
 from netcad.netcam import any_failures
 from netcad.checks import check_result_types as trt
-from netcad.vlan.check_vlans import VlanCheckCollection, VlanCheckExclusiveList
+from netcad.vlans.checks.check_vlans import VlanCheckCollection, VlanCheckExclusiveList
 
 # -----------------------------------------------------------------------------
 # Private Imports
